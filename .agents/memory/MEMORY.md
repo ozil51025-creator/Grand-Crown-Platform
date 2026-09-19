@@ -1,0 +1,1 @@
+- [Grand Crown test storage](grand-crown-test-storage.md) — local JSON and in-memory sessions are for testing only; production needs persistent backed-up storage.

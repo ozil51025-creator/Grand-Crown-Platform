@@ -1,0 +1,134 @@
+{
+  "settings": {
+    "brand": "Grand Crown",
+    "currency": "UGX",
+    "supportHandle": "@Doritos1225",
+    "telegramUrl": "https://t.me/+zNDnaz_xKfdiMTlk",
+    "airtelNumber": "0743240195",
+    "mtnNumber": "0764312328",
+    "payeeName": "Nakaliiba Martha"
+  },
+  "products": [
+    {
+      "id": "PROD-1",
+      "name": "Guest Room",
+      "price": 22000,
+      "daily": 4400,
+      "total": 396000,
+      "days": 90
+    },
+    {
+      "id": "PROD-2",
+      "name": "Deluxe Room",
+      "price": 66000,
+      "daily": 14000,
+      "total": 1260000,
+      "days": 90
+    },
+    {
+      "id": "PROD-3",
+      "name": "Executive Room",
+      "price": 200000,
+      "daily": 45000,
+      "total": 4050000,
+      "days": 90
+    },
+    {
+      "id": "PROD-4",
+      "name": "Deluxe Suite",
+      "price": 600000,
+      "daily": 145000,
+      "total": 13050000,
+      "days": 90
+    },
+    {
+      "id": "PROD-5",
+      "name": "Executive Suite",
+      "price": 1800000,
+      "daily": 466000,
+      "total": 41940000,
+      "days": 90
+    }
+  ],
+  "users": [
+    {
+      "id": "USR-462DC0C90DB07C",
+      "phone": "0700006653",
+      "passwordHash": "e9c92afb15264746a63529ab56729e047e9dd57315058016c487d7dd95121dbd5882b3c27d43acab6d8e015863170bf8b0a3015b72eef3a932b7fe28dce653a1",
+      "passwordSalt": "7b7c8d361d2050f365c3cb3c0fe5f947",
+      "referralCode": "A9FBAB8E",
+      "referredBy": null,
+      "wallet": 2100,
+      "totalEarned": 2100,
+      "createdAt": "2026-09-19T05:44:13.544Z",
+      "lastCheckin": null
+    }
+  ],
+  "purchases": [
+    {
+      "id": "PUR-EB7029FFB620A7",
+      "paymentId": "PAY-683461A0EF0786",
+      "userId": "USR-462DC0C90DB07C",
+      "productId": "PROD-1",
+      "productName": "Guest Room",
+      "amount": 22000,
+      "status": "active",
+      "purchasedAt": "2026-09-19T05:44:13.617Z",
+      "earningsCredited": 0
+    }
+  ],
+  "transactions": [
+    {
+      "id": "TX-B839872B7C3DCC",
+      "userId": "USR-462DC0C90DB07C",
+      "type": "signup_bonus",
+      "amount": 2100,
+      "createdAt": "2026-09-19T05:44:13.544Z"
+    },
+    {
+      "id": "TX-1260A826419D83",
+      "userId": "USR-462DC0C90DB07C",
+      "type": "purchase",
+      "amount": 22000,
+      "createdAt": "2026-09-19T05:44:13.618Z",
+      "paymentId": "PAY-683461A0EF0786",
+      "purchaseId": "PUR-EB7029FFB620A7"
+    }
+  ],
+  "activity": [
+    {
+      "id": "ACT-51EFDFD211B16B",
+      "userId": "USR-462DC0C90DB07C",
+      "type": "signup",
+      "createdAt": "2026-09-19T05:44:13.544Z"
+    },
+    {
+      "id": "ACT-2426BD917CBE18",
+      "userId": "USR-462DC0C90DB07C",
+      "type": "payment_submitted",
+      "createdAt": "2026-09-19T05:44:13.592Z"
+    },
+    {
+      "id": "ACT-A869FEC75522FE",
+      "userId": "USR-462DC0C90DB07C",
+      "type": "payment_approved",
+      "createdAt": "2026-09-19T05:44:13.618Z"
+    }
+  ],
+  "payments": [
+    {
+      "id": "PAY-683461A0EF0786",
+      "userId": "USR-462DC0C90DB07C",
+      "productId": "PROD-1",
+      "productName": "Guest Room",
+      "amount": 22000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0700006653",
+      "transactionId": "TEST-1789796653",
+      "status": "approved",
+      "createdAt": "2026-09-19T05:44:13.592Z",
+      "reviewedAt": "2026-09-19T05:44:13.617Z"
+    }
+  ],
+  "withdrawals": []
+}

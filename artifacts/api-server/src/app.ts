@@ -25,8 +25,20 @@ app.use(
     },
   }),
 );
-app.use(cors());
-app.use(express.json());
+app.disable("x-powered-by");
+app.use(cors({ origin: true, credentials: true }));
+app.use((_, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; frame-ancestors 'none'; object-src 'none';",
+  );
+  next();
+});
+app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);

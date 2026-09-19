@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: customer
+    description: Customer account and platform operations
+  - name: admin
+    description: Administrator operations
 paths:
   /healthz:
     get:
@@ -24,7 +28,408 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [customer]
+      responses:
+        "200":
+          description: Platform settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+  /products:
+    get:
+      operationId: getProducts
+      tags: [customer]
+      responses:
+        "200":
+          description: Available products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [customer]
+      responses:
+        "200":
+          description: Signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [customer]
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [customer]
+      responses:
+        "200":
+          description: Customer dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /checkin:
+    post:
+      operationId: claimCheckin
+      tags: [customer]
+      responses:
+        "200":
+          description: Check-in claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckinResponse"
+  /referral:
+    get:
+      operationId: getReferral
+      tags: [customer]
+      responses:
+        "200":
+          description: Referral overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralOverview"
+  /payments:
+    post:
+      operationId: submitPayment
+      tags: [customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+  /purchases:
+    get:
+      operationId: getPurchases
+      tags: [customer]
+      responses:
+        "200":
+          description: Customer purchases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+  /withdrawals:
+    get:
+      operationId: getWithdrawals
+      tags: [customer]
+      responses:
+        "200":
+          description: Customer withdrawals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+    post:
+      operationId: requestWithdrawal
+      tags: [customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "201":
+          description: Withdrawal submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalResponse"
+  /admin/auth/login:
+    post:
+      operationId: loginAdmin
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Administrator signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /admin/auth/logout:
+    post:
+      operationId: logoutAdmin
+      tags: [admin]
+      responses:
+        "200":
+          description: Administrator signed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      responses:
+        "200":
+          description: Administrator dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+  /admin/payments:
+    get:
+      operationId: getAdminPayments
+      tags: [admin]
+      responses:
+        "200":
+          description: Payment submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+  /admin/payments/{id}:
+    put:
+      operationId: reviewPayment
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "200":
+          description: Payment reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+  /admin/withdrawals:
+    get:
+      operationId: getAdminWithdrawals
+      tags: [admin]
+      responses:
+        "200":
+          description: Withdrawal requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+  /admin/withdrawals/{id}:
+    put:
+      operationId: reviewWithdrawal
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "200":
+          description: Withdrawal reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalResponse"
+  /admin/products:
+    get:
+      operationId: getAdminProducts
+      tags: [admin]
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+  /admin/products/{id}:
+    delete:
+      operationId: deleteProduct
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /admin/transactions:
+    get:
+      operationId: getAdminTransactions
+      tags: [admin]
+      responses:
+        "200":
+          description: Transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+  /admin/referrals:
+    get:
+      operationId: getAdminReferrals
+      tags: [admin]
+      responses:
+        "200":
+          description: Referral summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReferralSummary"
+  /admin/activity:
+    get:
+      operationId: getAdminActivity
+      tags: [admin]
+      responses:
+        "200":
+          description: Activity log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateAdminSettings
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
 components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +438,255 @@ components:
           type: string
       required:
         - status
+    Settings:
+      type: object
+      properties:
+        brand: { type: string }
+        currency: { type: string }
+        supportHandle: { type: string }
+        telegramUrl: { type: string }
+        airtelNumber: { type: string }
+        mtnNumber: { type: string }
+        payeeName: { type: string }
+      required: [brand, currency]
+    SettingsInput:
+      type: object
+      properties:
+        brand: { type: string, minLength: 1 }
+        currency: { type: string }
+        supportHandle: { type: string }
+        telegramUrl: { type: string }
+        airtelNumber: { type: string }
+        mtnNumber: { type: string }
+        payeeName: { type: string }
+    Product:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        price: { type: number }
+        daily: { type: number }
+        total: { type: number }
+        days: { type: integer }
+      required: [id, name, price, daily, total, days]
+    ProductInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        price: { type: number, minimum: 1 }
+        daily: { type: number, minimum: 0 }
+        total: { type: number, minimum: 0 }
+        days: { type: integer, minimum: 1 }
+      required: [name, price, daily, total, days]
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        phone: { type: string }
+        referralCode: { type: string }
+        wallet: { type: number }
+        totalEarned: { type: number }
+        createdAt: { type: string }
+        lastCheckin: { type: ["string", "null"] }
+      required: [id, phone, referralCode, wallet, totalEarned, createdAt]
+    RegisterInput:
+      type: object
+      properties:
+        phone: { type: string, minLength: 7 }
+        password: { type: string, minLength: 8 }
+        referralCode: { type: string }
+      required: [phone, password]
+    LoginInput:
+      type: object
+      properties:
+        phone: { type: string }
+        password: { type: string }
+      required: [phone, password]
+    AdminLoginInput:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+      required: [username, password]
+    AuthResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        user: { $ref: "#/components/schemas/User" }
+      required: [ok, user]
+    SessionResponse:
+      type: object
+      properties:
+        loggedIn: { type: boolean }
+        user: { anyOf: [{ $ref: "#/components/schemas/User" }, { type: "null" }] }
+      required: [loggedIn]
+    OkResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+      required: [ok]
+    Purchase:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        productId: { type: string }
+        productName: { type: string }
+        amount: { type: number }
+        status: { type: string }
+        purchasedAt: { type: string }
+        earningsCredited: { type: integer }
+      required: [id, userId, productId, productName, amount, status, purchasedAt]
+    Transaction:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        type: { type: string }
+        amount: { type: number }
+        createdAt: { type: string }
+      required: [id, userId, type, amount, createdAt]
+    Activity:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: ["string", "null"] }
+        type: { type: string }
+        createdAt: { type: string }
+      required: [id, type, createdAt]
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        productId: { type: string }
+        productName: { type: string }
+        amount: { type: number }
+        method: { type: string }
+        payerPhone: { type: string }
+        transactionId: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+        reviewedAt: { type: ["string", "null"] }
+      required: [id, userId, productId, productName, amount, method, payerPhone, transactionId, status, createdAt]
+    PaymentInput:
+      type: object
+      properties:
+        productId: { type: string }
+        method: { type: string }
+        amount: { type: number }
+        payerPhone: { type: string }
+        transactionId: { type: string }
+      required: [productId, method, amount, payerPhone, transactionId]
+    PaymentResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        paymentId: { type: string }
+        status: { type: string }
+        payment: { $ref: "#/components/schemas/Payment" }
+      required: [ok]
+    Withdrawal:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        amount: { type: number }
+        fee: { type: number }
+        netAmount: { type: number }
+        method: { type: string }
+        phone: { type: string }
+        status: { type: string }
+        createdAt: { type: string }
+        reviewedAt: { type: ["string", "null"] }
+      required: [id, userId, amount, fee, netAmount, method, phone, status, createdAt]
+    WithdrawalInput:
+      type: object
+      properties:
+        amount: { type: number, minimum: 7000 }
+        method: { type: string }
+        phone: { type: string }
+      required: [amount, method, phone]
+    WithdrawalResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        withdrawal: { $ref: "#/components/schemas/Withdrawal" }
+      required: [ok]
+    CheckinResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        reward: { type: number }
+        user: { $ref: "#/components/schemas/User" }
+      required: [ok, reward, user]
+    Dashboard:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        purchases:
+          type: array
+          items: { $ref: "#/components/schemas/Purchase" }
+        transactions:
+          type: array
+          items: { $ref: "#/components/schemas/Transaction" }
+        canWithdraw: { type: boolean }
+      required: [user, purchases, transactions, canWithdraw]
+    ReferralMember:
+      type: object
+      properties:
+        id: { type: string }
+        phone: { type: string }
+        level: { type: integer }
+        createdAt: { type: string }
+      required: [id, phone, level, createdAt]
+    Commission:
+      type: object
+      properties:
+        id: { type: string }
+        level: { type: integer }
+        amount: { type: number }
+        createdAt: { type: string }
+      required: [id, level, amount, createdAt]
+    ReferralOverview:
+      type: object
+      properties:
+        code: { type: string }
+        link: { type: string }
+        directReferrals: { type: integer }
+        teamSize: { type: integer }
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/ReferralMember" }
+        commissions:
+          type: array
+          items: { $ref: "#/components/schemas/Commission" }
+      required: [code, link, directReferrals, teamSize, members, commissions]
+    AdminDashboard:
+      type: object
+      properties:
+        users: { type: integer }
+        products: { type: integer }
+        purchases: { type: integer }
+        payments: { type: integer }
+        withdrawals: { type: integer }
+        transactions: { type: integer }
+        walletBalances: { type: number }
+        totalDeposited: { type: number }
+        totalWithdrawn: { type: number }
+        totalInvested: { type: number }
+      required: [users, products, purchases, payments, withdrawals, transactions, walletBalances, totalDeposited, totalWithdrawn, totalInvested]
+    AdminReferralSummary:
+      type: object
+      properties:
+        commissions: { type: integer }
+        total: { type: number }
+      required: [commissions, total]
+    ReviewInput:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+      required: [action]
 

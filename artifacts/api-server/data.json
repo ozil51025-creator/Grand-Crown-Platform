@@ -1,0 +1,24 @@
+{
+  "settings": {
+    "brand": "Grand Crown",
+    "currency": "UGX",
+    "supportHandle": "@Doritos1225",
+    "telegramUrl": "https://t.me/+zNDnaz_xKfdiMTlk",
+    "airtelNumber": "0743240195",
+    "mtnNumber": "0764312328",
+    "payeeName": "Nakaliiba Martha"
+  },
+  "products": [
+    { "id": "PROD-1", "name": "Guest Room", "price": 22000, "daily": 4400, "total": 396000, "days": 90 },
+    { "id": "PROD-2", "name": "Deluxe Room", "price": 66000, "daily": 14000, "total": 1260000, "days": 90 },
+    { "id": "PROD-3", "name": "Executive Room", "price": 200000, "daily": 45000, "total": 4050000, "days": 90 },
+    { "id": "PROD-4", "name": "Deluxe Suite", "price": 600000, "daily": 145000, "total": 13050000, "days": 90 },
+    { "id": "PROD-5", "name": "Executive Suite", "price": 1800000, "daily": 466000, "total": 41940000, "days": 90 }
+  ],
+  "users": [],
+  "purchases": [],
+  "transactions": [],
+  "activity": [],
+  "payments": [],
+  "withdrawals": []
+}
