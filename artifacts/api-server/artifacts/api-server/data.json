@@ -70,10 +70,22 @@
       "passwordSalt": "7769e821488b661af93e23ea639d1d75",
       "referralCode": "83ACD097",
       "referredBy": null,
+      "wallet": 3100,
+      "totalEarned": 3100,
+      "createdAt": "2026-09-19T05:47:10.137Z",
+      "lastCheckin": "2026-09-20"
+    },
+    {
+      "id": "USR-AC88432CF8867E",
+      "phone": "0719880512",
+      "passwordHash": "3cf258c9503cd1847559d4b309fa8ac58b5c07b635c9dbca0e864d4bd9e8c266963df11aaff865652ee83694a63ae28a98feed1d27d51415fbf4d23dfc971162",
+      "passwordSalt": "dbb3344620ae1107a66a5f68ad358bb3",
+      "referralCode": "9CCEED7D",
+      "referredBy": null,
       "wallet": 2600,
       "totalEarned": 2600,
-      "createdAt": "2026-09-19T05:47:10.137Z",
-      "lastCheckin": "2026-09-19"
+      "createdAt": "2026-09-20T05:01:52.667Z",
+      "lastCheckin": "2026-09-20"
     }
   ],
   "purchases": [
@@ -119,6 +131,27 @@
       "type": "checkin",
       "amount": 500,
       "createdAt": "2026-09-19T05:47:26.756Z"
+    },
+    {
+      "id": "TX-E35DF0F060015A",
+      "userId": "USR-9DE294901C32E9",
+      "type": "checkin",
+      "amount": 500,
+      "createdAt": "2026-09-20T04:55:45.407Z"
+    },
+    {
+      "id": "TX-FDB58DB0F3A2AB",
+      "userId": "USR-AC88432CF8867E",
+      "type": "signup_bonus",
+      "amount": 2100,
+      "createdAt": "2026-09-20T05:01:52.668Z"
+    },
+    {
+      "id": "TX-4B1A8C1DDDE182",
+      "userId": "USR-AC88432CF8867E",
+      "type": "checkin",
+      "amount": 500,
+      "createdAt": "2026-09-20T05:01:52.689Z"
     }
   ],
   "activity": [
@@ -145,6 +178,18 @@
       "userId": "USR-9DE294901C32E9",
       "type": "signup",
       "createdAt": "2026-09-19T05:47:10.137Z"
+    },
+    {
+      "id": "ACT-4BA09C043D8CD2",
+      "userId": "USR-AC88432CF8867E",
+      "type": "signup",
+      "createdAt": "2026-09-20T05:01:52.668Z"
+    },
+    {
+      "id": "ACT-C4894399AC701D",
+      "userId": "USR-AC88432CF8867E",
+      "type": "payment_submitted",
+      "createdAt": "2026-09-20T05:01:52.726Z"
     }
   ],
   "payments": [
@@ -160,6 +205,18 @@
       "status": "approved",
       "createdAt": "2026-09-19T05:44:13.592Z",
       "reviewedAt": "2026-09-19T05:44:13.617Z"
+    },
+    {
+      "id": "PAY-836568673DC46B",
+      "userId": "USR-AC88432CF8867E",
+      "productId": "PROD-1",
+      "productName": "Guest Room",
+      "amount": 22000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0719880512",
+      "transactionId": "VERIFY-1789880512",
+      "status": "pending",
+      "createdAt": "2026-09-20T05:01:52.726Z"
     }
   ],
   "withdrawals": []
