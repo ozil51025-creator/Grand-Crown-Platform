@@ -62,6 +62,18 @@
       "totalEarned": 2100,
       "createdAt": "2026-09-19T05:44:13.544Z",
       "lastCheckin": null
+    },
+    {
+      "id": "USR-9DE294901C32E9",
+      "phone": "0743240195",
+      "passwordHash": "72ffdc30acacde2e904d8b16ec5d1b164517c8d7cdcc015a67c3eb1fd33615331899a06f0d65bfcfcd61ef79f2567aa2210b5c57886a395bb678338770a6a06a",
+      "passwordSalt": "7769e821488b661af93e23ea639d1d75",
+      "referralCode": "83ACD097",
+      "referredBy": null,
+      "wallet": 2600,
+      "totalEarned": 2600,
+      "createdAt": "2026-09-19T05:47:10.137Z",
+      "lastCheckin": "2026-09-19"
     }
   ],
   "purchases": [
@@ -93,6 +105,20 @@
       "createdAt": "2026-09-19T05:44:13.618Z",
       "paymentId": "PAY-683461A0EF0786",
       "purchaseId": "PUR-EB7029FFB620A7"
+    },
+    {
+      "id": "TX-FAF8267C8622F5",
+      "userId": "USR-9DE294901C32E9",
+      "type": "signup_bonus",
+      "amount": 2100,
+      "createdAt": "2026-09-19T05:47:10.137Z"
+    },
+    {
+      "id": "TX-BE90E504128684",
+      "userId": "USR-9DE294901C32E9",
+      "type": "checkin",
+      "amount": 500,
+      "createdAt": "2026-09-19T05:47:26.756Z"
     }
   ],
   "activity": [
@@ -113,6 +139,12 @@
       "userId": "USR-462DC0C90DB07C",
       "type": "payment_approved",
       "createdAt": "2026-09-19T05:44:13.618Z"
+    },
+    {
+      "id": "ACT-9C07E350F641D2",
+      "userId": "USR-9DE294901C32E9",
+      "type": "signup",
+      "createdAt": "2026-09-19T05:47:10.137Z"
     }
   ],
   "payments": [
