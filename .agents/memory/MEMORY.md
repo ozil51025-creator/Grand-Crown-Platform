@@ -1,2 +1,3 @@
 - [Grand Crown test storage](grand-crown-test-storage.md) — local JSON and in-memory sessions are for testing only; production needs persistent backed-up storage.
 - [API workflow working directory](api-workflow-working-directory.md) — resolve local API data paths against the workflow’s actual working directory, not an assumed repository root.
+- [Poster catalogue values](poster-catalogue-values.md) — blank daily figures in the reference do not override configured payouts; preserve existing product identities.

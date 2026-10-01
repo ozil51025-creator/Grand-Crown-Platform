@@ -108,11 +108,19 @@ type Data = {
 };
 
 const defaultProducts: Product[] = [
-  { id: "PROD-1", name: "Guest Room", price: 22000, daily: 4400, total: 396000, days: 90 },
-  { id: "PROD-2", name: "Deluxe Room", price: 66000, daily: 14000, total: 1260000, days: 90 },
-  { id: "PROD-3", name: "Executive Room", price: 200000, daily: 45000, total: 4050000, days: 90 },
-  { id: "PROD-4", name: "Deluxe Suite", price: 600000, daily: 145000, total: 13050000, days: 90 },
-  { id: "PROD-5", name: "Executive Suite", price: 1800000, daily: 466000, total: 41940000, days: 90 },
+  { id: "PLAN-GARDEN", name: "Garden View", price: 19000, daily: 912, total: 34656, days: 38 },
+  { id: "PLAN-MOUNTAIN", name: "Mountain View", price: 30000, daily: 2400, total: 72000, days: 30 },
+  { id: "PLAN-OCEAN", name: "Ocean View", price: 50000, daily: 4000, total: 120000, days: 30 },
+  { id: "PLAN-EXECUTIVE", name: "Executive Room", price: 115000, daily: 9200, total: 294400, days: 32 },
+  { id: "PLAN-DELUXE", name: "Deluxe Room", price: 250000, daily: 32500, total: 650000, days: 20 },
+  { id: "PLAN-SUNSET", name: "Sunset View", price: 370000, daily: 55500, total: 999000, days: 18 },
+  { id: "PLAN-FAMILY", name: "Family Suite", price: 550000, daily: 82500, total: 1650000, days: 20 },
+  { id: "PLAN-SILVER", name: "Silver Suite", price: 775000, daily: 116250, total: 2325000, days: 20 },
+  { id: "PLAN-HONEYMOON", name: "Honeymoon Suite", price: 1650000, daily: 247500, total: 4950000, days: 20 },
+  { id: "PLAN-GOLDEN", name: "Golden Suite", price: 3000000, daily: 540000, total: 9180000, days: 17 },
+  { id: "PLAN-DIAMOND", name: "Diamond Suite", price: 5000000, daily: 1000000, total: 10000000, days: 10 },
+  { id: "PLAN-ROYAL", name: "Royal Suite", price: 8000000, daily: 1600000, total: 16000000, days: 10 },
+  { id: "PLAN-PRESIDENTIAL", name: "Presidential Suite", price: 12000000, daily: 3000000, total: 45000000, days: 15 },
 ];
 
 const defaultSettings: Settings = {

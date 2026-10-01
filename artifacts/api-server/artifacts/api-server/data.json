@@ -11,7 +11,7 @@
   "products": [
     {
       "id": "PROD-DE8DE5C10F9BA0",
-      "name": "Garden view",
+      "name": "Garden View",
       "price": 19000,
       "daily": 912,
       "total": 34656,
@@ -19,7 +19,7 @@
     },
     {
       "id": "PROD-E251AC9BCF56AD",
-      "name": "Mountain view",
+      "name": "Mountain View",
       "price": 30000,
       "daily": 2400,
       "total": 72000,
@@ -27,7 +27,7 @@
     },
     {
       "id": "PROD-98228A84920079",
-      "name": "Ocean view",
+      "name": "Ocean View",
       "price": 50000,
       "daily": 4000,
       "total": 120000,
@@ -35,7 +35,7 @@
     },
     {
       "id": "PROD-21C94E174FE2DF",
-      "name": "Executive room",
+      "name": "Executive Room",
       "price": 115000,
       "daily": 9200,
       "total": 294400,
@@ -43,7 +43,7 @@
     },
     {
       "id": "PROD-DD16A809516F98",
-      "name": "Deluxe room",
+      "name": "Deluxe Room",
       "price": 250000,
       "daily": 32500,
       "total": 650000,
@@ -51,7 +51,7 @@
     },
     {
       "id": "PROD-73196682E8226D",
-      "name": "Sunset view",
+      "name": "Sunset View",
       "price": 370000,
       "daily": 55500,
       "total": 999000,
@@ -59,7 +59,7 @@
     },
     {
       "id": "PROD-FE8B418345FB91",
-      "name": "Family suite",
+      "name": "Family Suite",
       "price": 550000,
       "daily": 82500,
       "total": 1650000,
@@ -67,7 +67,7 @@
     },
     {
       "id": "PROD-55A12A1EE19A05",
-      "name": "Silver suite",
+      "name": "Silver Suite",
       "price": 775000,
       "daily": 116250,
       "total": 2325000,
@@ -75,7 +75,7 @@
     },
     {
       "id": "PROD-3B1DFE21C849A8",
-      "name": "Honeymoon",
+      "name": "Honeymoon Suite",
       "price": 1650000,
       "daily": 247500,
       "total": 4950000,
@@ -83,7 +83,7 @@
     },
     {
       "id": "PROD-E54F11D607A952",
-      "name": "GOLDEN SUITE",
+      "name": "Golden Suite",
       "price": 3000000,
       "daily": 540000,
       "total": 9180000,
@@ -91,7 +91,7 @@
     },
     {
       "id": "PROD-E48F5484BD9C9B",
-      "name": "DIAMOND SUITE",
+      "name": "Diamond Suite",
       "price": 5000000,
       "daily": 1000000,
       "total": 10000000,
@@ -99,7 +99,7 @@
     },
     {
       "id": "PROD-0D849078AC63B3",
-      "name": "Royal suite",
+      "name": "Royal Suite",
       "price": 8000000,
       "daily": 1600000,
       "total": 16000000,
@@ -107,7 +107,7 @@
     },
     {
       "id": "PROD-58FFA0CCA12CB4",
-      "name": "PRESIDENTIAL SUITE",
+      "name": "Presidential Suite",
       "price": 12000000,
       "daily": 3000000,
       "total": 45000000,
