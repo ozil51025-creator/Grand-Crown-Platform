@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Private legacy migration backups and compiled storage utilities
+**/.backups/
+**/.storage-tools/
