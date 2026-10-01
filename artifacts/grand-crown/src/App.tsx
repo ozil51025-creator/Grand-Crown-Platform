@@ -488,7 +488,7 @@ function AdminInfoPage({ eyebrow, title, copy, title2, body }: { eyebrow: string
 
 function AdminSupportPage({ settings }: { settings?: Settings }) {
   const groupUrl = settings?.telegramUrl || 'https://t.me/+zNDnaz_xKfdiMTlk';
-  const handle = settings?.supportHandle || '@phio333';
+  const handle = settings?.supportHandle || '@grandcrown01';
   const adminUrl = `https://t.me/${handle.replace(/^@/, '')}`;
   return <div className="animate-rise"><PageHeading eyebrow="Customer support" title="Messages." copy="Open the two configured Telegram support channels for member conversations." /><div className="grid gap-4 md:grid-cols-2"><a href={groupUrl} target="_blank" rel="noreferrer" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:border-[#ef7815] hover:shadow-sm"><MessageCircle className="size-6 text-[#ef7815]" /><h2 className="mt-5 text-xl font-extrabold text-slate-900">Telegram group</h2><p className="mt-2 text-sm leading-6 text-slate-500">Open the Grand Crown member support group.</p><span className="mt-5 inline-flex text-sm font-bold text-[#ef7815]">Open group <ArrowUpRight className="ml-1 size-4" /></span></a><a href={adminUrl} target="_blank" rel="noreferrer" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:border-[#ef7815] hover:shadow-sm"><UserRound className="size-6 text-[#ef7815]" /><h2 className="mt-5 text-xl font-extrabold text-slate-900">Talk to admin {handle}</h2><p className="mt-2 text-sm leading-6 text-slate-500">Open a direct Telegram conversation with the administrator.</p><span className="mt-5 inline-flex text-sm font-bold text-[#ef7815]">Message admin <ArrowUpRight className="ml-1 size-4" /></span></a></div></div>;
 }

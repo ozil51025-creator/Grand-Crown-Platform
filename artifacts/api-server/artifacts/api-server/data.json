@@ -6,7 +6,8 @@
     "telegramUrl": "https://t.me/+zNDnaz_xKfdiMTlk",
     "airtelNumber": "0743240195",
     "mtnNumber": "0764312328",
-    "payeeName": "Nakaliiba Martha"
+    "payeeName": "Nakaliiba Martha",
+    "termsText": ""
   },
   "products": [
     {
@@ -148,10 +149,10 @@
       "passwordSalt": "b6b977011574b31bf5f1b5da13136816",
       "referralCode": "468CBF49",
       "referredBy": null,
-      "wallet": 2100,
-      "totalEarned": 2100,
+      "wallet": 2600,
+      "totalEarned": 2600,
       "createdAt": "2026-09-26T02:44:51.643Z",
-      "lastCheckin": null,
+      "lastCheckin": "2026-10-01",
       "banned": false
     }
   ],
@@ -177,6 +178,13 @@
       "type": "signup_bonus",
       "amount": 2100,
       "createdAt": "2026-09-26T02:44:51.643Z"
+    },
+    {
+      "id": "TX-851756FA68CD86",
+      "userId": "USR-17B5675666A15F",
+      "type": "checkin",
+      "amount": 500,
+      "createdAt": "2026-10-01T20:50:48.102Z"
     }
   ],
   "activity": [
@@ -200,5 +208,6 @@
     }
   ],
   "payments": [],
-  "withdrawals": []
+  "withdrawals": [],
+  "giftCodes": []
 }

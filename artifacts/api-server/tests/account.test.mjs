@@ -155,6 +155,20 @@ if (!bundle) {
     assert.equal(storedSecond?.referredBy, first.user.id);
   });
 
+  test("new members receive the 1000 UGX welcome bonus and 50 UGX daily check-in bonus", async () => {
+    const member = await register();
+    assert.equal(member.user.wallet, 1000);
+    assert.equal(member.user.totalEarned, 1000);
+    assert.equal(readStore().transactions.find((transaction) => transaction.userId === member.user.id && transaction.type === "signup_bonus")?.amount, 1000);
+
+    const result = await request("/checkin", { method: "POST", cookie: member.cookie });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.reward, 50);
+    assert.equal(result.body.user.wallet, 1050);
+    assert.equal(result.body.user.totalEarned, 1050);
+    assert.equal(readStore().transactions.find((transaction) => transaction.userId === member.user.id && transaction.type === "checkin")?.amount, 50);
+  });
+
   test("account and admin options require their respective authentication", async () => {
     const member = await register();
     const cases = [

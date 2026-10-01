@@ -149,14 +149,14 @@
   filter: brightness(1.08);
   box-shadow: 0 0 20px rgba(0, 231, 223, .4), inset 0 1px rgba(255, 255, 255, .75);
 }
-.gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] {
+.gc-auth-reference-wrap .gc-auth-mode-toggle button[data-testid="button-toggle-auth-mode"] {
   display: block;
   margin: 10px auto 0;
   color: rgba(205, 222, 224, .78);
   font-size: 10px;
   text-align: center;
 }
-.gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] span {
+.gc-auth-reference-wrap .gc-auth-mode-toggle button[data-testid="button-toggle-auth-mode"] span {
   color: #49e7df;
 }
 .gc-auth-reference-wrap .gc-auth-form-note {
@@ -319,7 +319,7 @@
     margin-top: 3px;
     font-size: 10px;
   }
-  .gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] {
+  .gc-auth-reference-wrap .gc-auth-mode-toggle button[data-testid="button-toggle-auth-mode"] {
     margin-top: 7px;
     font-size: 8px;
   }

@@ -131,7 +131,7 @@ const defaultProducts: Product[] = [
 const defaultSettings: Settings = {
   brand: "Grand Crown",
   currency: "UGX",
-  supportHandle: "@phio333",
+  supportHandle: "@grandcrown01",
   telegramUrl: "https://t.me/+zNDnaz_xKfdiMTlk",
   airtelNumber: "0743240195",
   mtnNumber: "0764312328",
@@ -460,14 +460,14 @@ router.post("/auth/register", (req, res) => {
     passwordFormat: "raw",
     referralCode: memberReferralCode,
     referredBy: parent?.id ?? null,
-    wallet: 2100,
-    totalEarned: 2100,
+    wallet: 1000,
+    totalEarned: 1000,
     createdAt: now(),
     lastCheckin: null,
     banned: false,
   };
   data.users.push(user);
-  addTransaction(data, user.id, "signup_bonus", 2100);
+  addTransaction(data, user.id, "signup_bonus", 1000);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "signup", createdAt: now() });
   writeData(data);
   const token = crypto.randomBytes(32).toString("hex");
@@ -528,11 +528,11 @@ router.post("/checkin", (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   if (user.lastCheckin === today) return res.status(409).json({ error: "Daily check-in already claimed" });
   user.lastCheckin = today;
-  user.wallet += 500;
-  user.totalEarned += 500;
-  addTransaction(data, user.id, "checkin", 500);
+  user.wallet += 50;
+  user.totalEarned += 50;
+  addTransaction(data, user.id, "checkin", 50);
   writeData(data);
-  return res.json({ ok: true, reward: 500, user: publicUser(user) });
+  return res.json({ ok: true, reward: 50, user: publicUser(user) });
 });
 
 router.get("/referral", (req, res) => {

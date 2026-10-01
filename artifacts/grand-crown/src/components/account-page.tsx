@@ -37,7 +37,7 @@ export function AccountPage({ user, settings, withdrawals, withdrawalsLoading, w
   const [walletOpen, setWalletOpen] = useState(false);
   const toggle = (row: Row) => setOpen(current => current === row ? null : row);
   const groupUrl = settings?.telegramUrl || 'https://t.me/+zNDnaz_xKfdiMTlk';
-  const adminHandle = settings?.supportHandle || '@phio333';
+  const adminHandle = settings?.supportHandle || '@grandcrown01';
   const adminUrl = `https://t.me/${adminHandle.replace(/^@/, '')}`;
 
   return <div className="relative -mx-5 -mt-5 min-h-[calc(100dvh-5rem)] px-4 pb-10 pt-5 sm:-m-8 sm:p-8 lg:-m-12 lg:p-12" data-testid="page-account">
