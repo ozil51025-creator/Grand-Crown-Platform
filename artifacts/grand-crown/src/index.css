@@ -599,7 +599,7 @@
   justify-content: space-between;
   gap: 12px;
 }
-.gc-auth-small-logo { min-width: 0; }
+.gc-auth-small-logo { display: none; min-width: 0; }
 .gc-auth-small-logo > div > div:first-child {
   width: 34px;
   height: 34px;
@@ -783,7 +783,7 @@
 .gc-auth-mode-register .gc-auth-brand-cut { clip-path: polygon(0 0, 67% 0, 20% 100%, 0 100%); }
 .gc-auth-diagonal-line {
   position: absolute;
-  z-index: 4;
+  z-index: 1;
   top: -16%;
   bottom: -16%;
   width: 1px;
@@ -890,6 +890,7 @@
   box-shadow: 0 0 0 5px rgba(48, 215, 203, .18);
 }
 @media (min-width: 761px) {
+  .gc-auth-form-panel { background: transparent; }
   .gc-auth-mode-login .gc-auth-brand { grid-column: 2; }
   .gc-auth-mode-login .gc-auth-form-panel { grid-column: 1; }
   .gc-auth-mode-register .gc-auth-brand { grid-column: 1; }
@@ -902,6 +903,7 @@
   .gc-auth-frame { display: flex; width: 100%; height: auto; min-height: auto; flex-direction: column; border-radius: 6px; }
   .gc-auth-form-panel { order: 1; min-height: min(550px, calc(100dvh - 20px)); padding: 76px 22px 25px; }
   .gc-auth-form-top { top: 20px; right: 20px; left: 20px; }
+  .gc-auth-small-logo { display: block; }
   .gc-auth-card { margin: 0 auto; }
   .gc-auth-tabs { margin-bottom: 24px; }
   .gc-auth-heading { min-height: 83px; margin-bottom: 17px; }

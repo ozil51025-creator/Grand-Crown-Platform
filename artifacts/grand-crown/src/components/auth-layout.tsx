@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
-import { Crown, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 type Mode = 'login' | 'register';
 
