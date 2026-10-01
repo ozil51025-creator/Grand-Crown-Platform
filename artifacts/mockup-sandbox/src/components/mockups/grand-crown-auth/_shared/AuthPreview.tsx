@@ -82,7 +82,6 @@ export function AuthPreview({ variant }: { variant: Variant }) {
               placeholder="07xx xxx xxx"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
-              icon={Phone}
             />
             <PreviewField
               variant={variant}
@@ -93,7 +92,6 @@ export function AuthPreview({ variant }: { variant: Variant }) {
               placeholder="At least 8 characters"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              icon={LockKeyhole}
             />
             <AuthReveal show={mode === 'register'}>
               <PreviewField
@@ -103,7 +101,6 @@ export function AuthPreview({ variant }: { variant: Variant }) {
                 placeholder="GC-4L8P"
                 value={referralCode}
                 onChange={(event) => setReferralCode(event.target.value)}
-                icon={Link2}
               />
             </AuthReveal>
             <button data-testid="button-submit-auth" type="submit">
