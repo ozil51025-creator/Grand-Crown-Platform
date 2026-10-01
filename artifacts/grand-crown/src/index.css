@@ -795,12 +795,12 @@
   outline-offset: 3px;
   box-shadow: 0 0 0 5px rgba(48, 215, 203, .18);
 }
-@media (min-width: 761px) {
-  .gc-auth-mode-register .gc-auth-frame { grid-template-columns: minmax(420px, 1.06fr) minmax(390px, .94fr); }
+@media (min-width: 861px) {
+  .gc-auth-mode-register .gc-auth-frame { grid-template-columns: minmax(0, 1.06fr) minmax(0, .94fr); }
   .gc-auth-mode-login .gc-auth-brand { border-left: 1px solid rgba(79, 224, 211, .23); }
   .gc-auth-mode-register .gc-auth-brand { border-right: 1px solid rgba(79, 224, 211, .23); }
 }
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .gc-auth-shell { display: block; min-height: 100dvh; padding: 10px 10px 36px; overflow-x: hidden; overflow-y: auto; }
   .gc-auth-shell::before { background-size: 34px 34px; }
   .gc-auth-grid-bg { top: 8%; width: 96vw; height: 54vh; }
