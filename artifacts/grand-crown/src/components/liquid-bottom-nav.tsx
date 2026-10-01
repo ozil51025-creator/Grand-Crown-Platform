@@ -8,7 +8,7 @@ export function LiquidBottomNav({ items, active, onSelect }: { items: LiquidNavI
   const spring = reduce ? { duration: 0 } : { type: 'spring' as const, stiffness: 420, damping: 30, mass: 0.9 };
   return (
     <nav aria-label="Member navigation" className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] lg:hidden">
-      <div className="liquid-bar relative mx-auto grid max-w-md grid-cols-5 rounded-[1.75rem] p-1.5">
+      <div className="liquid-bar relative mx-auto grid h-[4.25rem] max-w-md grid-cols-5 rounded-[1.15rem] px-1.5 pt-1">
         {items.map(item => {
           const selected = active === item.id;
           const label = item.id === 'products' ? 'Plans' : item.label.replace('My ', '');
@@ -22,13 +22,21 @@ export function LiquidBottomNav({ items, active, onSelect }: { items: LiquidNavI
               onClick={() => onSelect(item.id)}
               whileTap={reduce ? undefined : { scale: 0.88 }}
               transition={spring}
-              className={`relative flex min-h-[3.5rem] flex-col items-center justify-center gap-1 rounded-[1.35rem] text-[10px] font-bold outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? 'text-primary' : 'text-sidebar-foreground/60'}`}
+              className={`relative flex min-w-0 items-center justify-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-accent ${selected ? 'text-white' : 'text-white/70 transition-colors hover:text-white'}`}
             >
-              {selected && <motion.span layoutId="liquid-blob" transition={spring} className="liquid-blob absolute inset-0 rounded-[1.35rem]" />}
-              <motion.span className="relative" animate={reduce ? undefined : { y: selected ? -2 : 0, scale: selected ? 1.1 : 1 }} transition={spring}>
-                <item.icon className="size-5" strokeWidth={selected ? 2.5 : 2} />
+              {selected && <>
+                <motion.span layoutId="liquid-active" transition={spring} className="liquid-active-orb absolute -top-[1.35rem] left-1/2 grid size-[3.5rem] -translate-x-1/2 place-items-center rounded-full" />
+                <motion.span initial={reduce ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={reduce ? { duration: 0 } : { duration: .18, delay: .06 }} className="absolute inset-x-0 bottom-[.38rem] truncate text-center text-[9px] font-semibold leading-none text-white">
+                  {label}
+                </motion.span>
+              </>}
+              <motion.span
+                className={`relative z-[1] flex items-center justify-center ${selected ? 'size-[3.5rem] -translate-y-[1.35rem] text-slate-950' : 'size-full'}`}
+                animate={reduce ? undefined : { scale: selected ? 1 : 0.96 }}
+                transition={spring}
+              >
+                <item.icon className="size-[1.35rem]" strokeWidth={selected ? 2.3 : 1.9} />
               </motion.span>
-              <span className="relative">{label}</span>
             </motion.button>
           );
         })}
