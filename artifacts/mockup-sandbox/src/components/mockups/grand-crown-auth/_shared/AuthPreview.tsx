@@ -44,6 +44,17 @@ function ReferenceField({
   );
 }
 
+function PreviewField({
+  variant,
+  label,
+  icon,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { variant: Variant; label: string; icon: typeof Phone }) {
+  return variant === 'reference'
+    ? <ReferenceField label={label} icon={icon} {...props} />
+    : <CurrentField label={label} {...props} />;
+}
+
 export function AuthPreview({ variant }: { variant: Variant }) {
   const [mode, setMode] = useState<Mode>('login');
   const [phone, setPhone] = useState('');
@@ -61,9 +72,11 @@ export function AuthPreview({ variant }: { variant: Variant }) {
         logo={<PreviewLogo />}
         logoSmall={<PreviewLogo small />}
         form={
-          <form onSubmit={(event) => event.preventDefault()} className="space-y-4">
-            <Field
+          <form onSubmit={(event) => event.preventDefault()}>
+            <PreviewField
+              variant={variant}
               label="Mobile number"
+              icon={Phone}
               type="tel"
               autoComplete="tel"
               placeholder="07xx xxx xxx"
@@ -71,8 +84,10 @@ export function AuthPreview({ variant }: { variant: Variant }) {
               onChange={(event) => setPhone(event.target.value)}
               icon={Phone}
             />
-            <Field
+            <PreviewField
+              variant={variant}
               label="Password"
+              icon={LockKeyhole}
               type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               placeholder="At least 8 characters"
@@ -81,8 +96,10 @@ export function AuthPreview({ variant }: { variant: Variant }) {
               icon={LockKeyhole}
             />
             <AuthReveal show={mode === 'register'}>
-              <Field
+              <PreviewField
+                variant={variant}
                 label="Referral code (optional)"
+                icon={Link2}
                 placeholder="GC-4L8P"
                 value={referralCode}
                 onChange={(event) => setReferralCode(event.target.value)}

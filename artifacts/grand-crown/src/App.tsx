@@ -44,7 +44,7 @@ import {
   type Settings,
   type User,
 } from '@workspace/api-client-react';
-import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LogOut, Menu, MessageCircle, Minus, Package, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
+import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LockKeyhole, LogOut, Menu, MessageCircle, Minus, Package, Phone, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { AuthLayout, AuthReveal } from '@/components/auth-layout';
@@ -93,6 +93,10 @@ function Button({ children, variant = 'primary', className = '', ...props }: Rea
 
 function Field({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   return <label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">{label}</span><input className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20" {...props} /></label>;
+}
+
+function AuthField({ label, icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; icon: typeof Phone }) {
+  return <label className="gc-auth-field"><span className="gc-auth-field-label">{label}</span><div className="gc-auth-input-wrap"><input className="gc-auth-input" {...props} /><Icon className="gc-auth-input-icon" size={15} aria-hidden="true" /></div></label>;
 }
 
 function StatusPill({ status }: { status?: string }) {
@@ -146,14 +150,14 @@ function AuthPage() {
     onAdmin={() => setAdminOpen(true)}
     logo={<Logo />}
     logoSmall={<Logo small />}
-    form={<form onSubmit={submit} className="space-y-4">
-      <Field label="Mobile number" autoComplete="tel" data-testid="input-phone" type="tel" placeholder="07xx xxx xxx" value={phone} onChange={e => setPhone(e.target.value)} required minLength={7} />
-      <Field label="Password" data-testid="input-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
-      <AuthReveal show={mode === 'register'}><Field label="Referral code (optional)" data-testid="input-referral-code" placeholder="e.g. GC-4L8P" value={referralCode} onChange={e => setReferralCode(e.target.value)} /></AuthReveal>
+    form={<form onSubmit={submit}>
+      <AuthField label="Mobile number" icon={Phone} autoComplete="tel" data-testid="input-phone" type="tel" placeholder="07xx xxx xxx" value={phone} onChange={e => setPhone(e.target.value)} required minLength={7} />
+      <AuthField label="Password" icon={LockKeyhole} data-testid="input-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+      <AuthReveal show={mode === 'register'}><AuthField label="Referral code (optional)" icon={Link2} data-testid="input-referral-code" placeholder="e.g. GC-4L8P" value={referralCode} onChange={e => setReferralCode(e.target.value)} /></AuthReveal>
       {!!(login.error || register.error) && <p data-testid="status-auth-error" role="alert" className="text-sm text-destructive">We couldn't verify those details. Please try again.</p>}
-      <Button data-testid="button-submit-auth" type="submit" className="liquid-submit mt-2 min-h-12 w-full rounded-2xl" disabled={pending}>{pending ? 'Checking details…' : mode === 'login' ? 'Enter my circle' : 'Create my account'}<ArrowUpRight className="size-4" /></Button>
+      <Button data-testid="button-submit-auth" type="submit" className="liquid-submit mt-2 min-h-12 w-full rounded-2xl" disabled={pending}>{pending ? 'Checking details…' : mode === 'login' ? 'Login' : 'Sign up'}<ArrowUpRight className="size-4" /></Button>
     </form>}
-    toggle={<button type="button" data-testid="button-toggle-auth-mode" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="mt-6 w-full rounded-lg text-center text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">{mode === 'login' ? 'New to Grand Crown? ' : 'Already a member? '}<span className="font-bold text-primary">{mode === 'login' ? 'Create an account' : 'Sign in'}</span></button>}
+    toggle={<button type="button" data-testid="button-toggle-auth-mode" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="mt-6 w-full rounded-lg text-center text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">{mode === 'login' ? "Don't have an account? " : 'Already have an account? '}<span className="font-bold text-primary">{mode === 'login' ? 'Sign up' : 'Login'}</span></button>}
     admin={adminOpen && <Modal title="Administrator access" onClose={() => setAdminOpen(false)}><form onSubmit={submitAdmin} className="space-y-4"><Field label="Username" autoComplete="username" data-testid="input-admin-username" value={adminUser} onChange={e => setAdminUser(e.target.value)} required /><Field label="Password" autoComplete="current-password" data-testid="input-admin-password" type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} required />{adminLogin.error && <p className="text-sm text-destructive">Admin sign in failed. Check your credentials.</p>}<Button data-testid="button-submit-admin-login" className="w-full" disabled={adminLogin.isPending}>{adminLogin.isPending ? 'Verifying…' : 'Open admin console'}</Button></form></Modal>}
   />;
 }
