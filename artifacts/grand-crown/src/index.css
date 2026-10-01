@@ -453,3 +453,30 @@
     inset: -1px;
   }
 }
+
+/* Liquid navigation + fluid auth */
+.liquid-bar {
+  background: linear-gradient(180deg, hsl(160 40% 18% / .94), hsl(160 45% 11% / .96));
+  box-shadow: 0 18px 40px -12px hsl(160 45% 8% / .55), inset 0 1px 0 hsl(43 78% 70% / .18), inset 0 -1px 0 hsl(160 45% 4% / .5);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+.liquid-blob {
+  background: radial-gradient(120% 90% at 30% 20%, hsl(45 90% 76%), hsl(var(--accent)) 55%, hsl(38 70% 50%));
+  box-shadow: 0 8px 18px -6px hsl(43 78% 50% / .6), inset 0 2px 4px hsl(48 100% 90% / .7), inset 0 -3px 6px hsl(35 70% 35% / .35);
+}
+.auth-orb { position: absolute; border-radius: 9999px; filter: blur(40px); pointer-events: none; animation: orb 18s ease-in-out infinite alternate; }
+@keyframes orb { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(40px,-30px,0) scale(1.15); } }
+.auth-kenburns { animation: kenburns 22s ease-in-out infinite alternate; }
+@keyframes kenburns { from { transform: scale(1.04); } to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); } }
+@media (max-width: 1023px) {
+  /* Off-canvas member controls must not stay in the mobile keyboard tab order. */
+  .grain > aside.-translate-x-full { visibility: hidden; }
+}
+[data-testid="button-admin-access"]:focus-visible,
+.liquid-bar button:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-orb, .auth-kenburns, .animate-rise, .animate-fade { animation: none !important; }
+}
