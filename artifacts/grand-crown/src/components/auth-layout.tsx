@@ -125,10 +125,6 @@ export function AuthLayout({
           </p>
         </SwapText>
       </div>
-      <div className="gc-auth-brand-mark">
-        <Crown size={14} />
-        <span>GRAND CROWN · HOTEL &amp; SUITES</span>
-      </div>
     </section>
   );
 
@@ -139,9 +135,6 @@ export function AuthLayout({
         <div className="gc-auth-brand-cut" aria-hidden />
         <div className={`gc-auth-diagonal-line ${login ? 'is-login' : 'is-register'}`} aria-hidden />
         {login ? <>{formPanel}{brandPanel}</> : <>{brandPanel}{formPanel}</>}
-      </div>
-      <div className="gc-auth-bottom-mark" aria-hidden>
-        GRAND CROWN · HOTEL &amp; SUITES
       </div>
       {admin}
     </main>
