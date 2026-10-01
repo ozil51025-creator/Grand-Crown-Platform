@@ -24,7 +24,8 @@ export const GetSettingsResponse = zod.object({
   "telegramUrl": zod.string().optional(),
   "airtelNumber": zod.string().optional(),
   "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional()
+  "payeeName": zod.string().optional(),
+  "termsText": zod.string().optional()
 })
 
 
@@ -552,10 +553,13 @@ export const GetAdminSettingsResponse = zod.object({
   "telegramUrl": zod.string().optional(),
   "airtelNumber": zod.string().optional(),
   "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional()
+  "payeeName": zod.string().optional(),
+  "termsText": zod.string().optional()
 })
 
 
+
+export const updateAdminSettingsBodyTermsTextMax = 20000;
 
 
 
@@ -566,7 +570,8 @@ export const UpdateAdminSettingsBody = zod.object({
   "telegramUrl": zod.string().optional(),
   "airtelNumber": zod.string().optional(),
   "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional()
+  "payeeName": zod.string().optional(),
+  "termsText": zod.string().max(updateAdminSettingsBodyTermsTextMax).optional()
 })
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -576,7 +581,114 @@ export const UpdateAdminSettingsResponse = zod.object({
   "telegramUrl": zod.string().optional(),
   "airtelNumber": zod.string().optional(),
   "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional()
+  "payeeName": zod.string().optional(),
+  "termsText": zod.string().optional()
+})
+
+
+export const GetAccountTransactionsResponseItem = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "type": zod.string(),
+  "amount": zod.number(),
+  "createdAt": zod.string()
+})
+export const GetAccountTransactionsResponse = zod.array(GetAccountTransactionsResponseItem)
+
+
+export const changeAccountPasswordBodyCurrentPasswordMax = 128;
+
+export const changeAccountPasswordBodyNewPasswordMin = 8;
+export const changeAccountPasswordBodyNewPasswordMax = 128;
+
+
+
+export const ChangeAccountPasswordBody = zod.object({
+  "currentPassword": zod.string().min(1).max(changeAccountPasswordBodyCurrentPasswordMax),
+  "newPassword": zod.string().min(changeAccountPasswordBodyNewPasswordMin).max(changeAccountPasswordBodyNewPasswordMax)
+})
+
+export const ChangeAccountPasswordResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+export const redeemGiftCodeBodyCodeMin = 3;
+export const redeemGiftCodeBodyCodeMax = 40;
+
+
+
+export const RedeemGiftCodeBody = zod.object({
+  "code": zod.string().min(redeemGiftCodeBodyCodeMin).max(redeemGiftCodeBodyCodeMax)
+})
+
+export const RedeemGiftCodeResponse = zod.object({
+  "ok": zod.boolean(),
+  "amount": zod.number().int(),
+  "wallet": zod.number()
+})
+
+
+export const GetAdminGiftCodesResponseItem = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "amount": zod.number().int(),
+  "maxRedemptions": zod.number().int(),
+  "redemptionCount": zod.number().int(),
+  "enabled": zod.boolean(),
+  "createdAt": zod.string(),
+  "expiresAt": zod.string().nullable()
+})
+export const GetAdminGiftCodesResponse = zod.array(GetAdminGiftCodesResponseItem)
+
+
+export const createAdminGiftCodeBodyCodeMin = 3;
+export const createAdminGiftCodeBodyCodeMax = 40;
+
+
+export const createAdminGiftCodeBodyCodeRegExp = new RegExp('^[A-Za-z0-9-]+$');
+export const createAdminGiftCodeBodyAmountMax = 100000000;
+
+export const createAdminGiftCodeBodyMaxRedemptionsMax = 100000;
+
+
+
+export const CreateAdminGiftCodeBody = zod.object({
+  "code": zod.string().min(createAdminGiftCodeBodyCodeMin).max(createAdminGiftCodeBodyCodeMax).regex(createAdminGiftCodeBodyCodeRegExp),
+  "amount": zod.number().int().min(1).max(createAdminGiftCodeBodyAmountMax),
+  "maxRedemptions": zod.number().int().min(1).max(createAdminGiftCodeBodyMaxRedemptionsMax),
+  "expiresAt": zod.coerce.date().nullish()
+})
+
+export const CreateAdminGiftCodeResponse = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "amount": zod.number().int(),
+  "maxRedemptions": zod.number().int(),
+  "redemptionCount": zod.number().int(),
+  "enabled": zod.boolean(),
+  "createdAt": zod.string(),
+  "expiresAt": zod.string().nullable()
+})
+
+
+export const UpdateAdminGiftCodeParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateAdminGiftCodeBody = zod.object({
+  "enabled": zod.boolean()
+})
+
+export const UpdateAdminGiftCodeResponse = zod.object({
+  "id": zod.string(),
+  "code": zod.string(),
+  "amount": zod.number().int(),
+  "maxRedemptions": zod.number().int(),
+  "redemptionCount": zod.number().int(),
+  "enabled": zod.boolean(),
+  "createdAt": zod.string(),
+  "expiresAt": zod.string().nullable()
 })
 
 

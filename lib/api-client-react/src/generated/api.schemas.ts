@@ -5,6 +5,70 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface PasswordChangeInput {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  currentPassword: string;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  newPassword: string;
+}
+
+export interface GiftRedemptionInput {
+  /**
+     * @minLength 3
+     * @maxLength 40
+     */
+  code: string;
+}
+
+export interface GiftRedemptionResponse {
+  ok: boolean;
+  amount: number;
+  wallet: number;
+}
+
+export interface GiftCodeInput {
+  /**
+     * @minLength 3
+     * @maxLength 40
+     * @pattern ^[A-Za-z0-9-]+$
+     */
+  code: string;
+  /**
+     * @minimum 1
+     * @maximum 100000000
+     */
+  amount: number;
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  maxRedemptions: number;
+  /** @nullable */
+  expiresAt?: string | null;
+}
+
+export interface GiftCodeUpdate {
+  enabled: boolean;
+}
+
+export interface GiftCode {
+  id: string;
+  code: string;
+  amount: number;
+  maxRedemptions: number;
+  redemptionCount: number;
+  enabled: boolean;
+  createdAt: string;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -17,6 +81,7 @@ export interface Settings {
   airtelNumber?: string;
   mtnNumber?: string;
   payeeName?: string;
+  termsText?: string;
 }
 
 export interface SettingsInput {
@@ -28,6 +93,8 @@ export interface SettingsInput {
   airtelNumber?: string;
   mtnNumber?: string;
   payeeName?: string;
+  /** @maxLength 20000 */
+  termsText?: string;
 }
 
 export interface Product {

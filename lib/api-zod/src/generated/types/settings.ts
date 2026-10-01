@@ -14,4 +14,5 @@ export interface Settings {
   airtelNumber?: string;
   mtnNumber?: string;
   payeeName?: string;
+  termsText?: string;
 }

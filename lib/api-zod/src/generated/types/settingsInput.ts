@@ -15,4 +15,6 @@ export interface SettingsInput {
   airtelNumber?: string;
   mtnNumber?: string;
   payeeName?: string;
+  /** @maxLength 20000 */
+  termsText?: string;
 }

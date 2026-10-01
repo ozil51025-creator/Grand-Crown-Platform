@@ -2,6 +2,8 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { UpdateAdminSettingsBody } from "@workspace/api-zod";
+import { registerAccountRoutes, type StoredGiftCode } from "./account";
 
 type Product = {
   id: string;
@@ -12,11 +14,12 @@ type Product = {
   days: number;
 };
 
-type User = {
+export type User = {
   id: string;
   phone: string;
   passwordHash: string;
   passwordSalt: string;
+  passwordFormat?: "raw";
   referralCode: string;
   referredBy: string | null;
   wallet: number;
@@ -94,9 +97,10 @@ type Settings = {
   airtelNumber: string;
   mtnNumber: string;
   payeeName: string;
+  termsText?: string;
 };
 
-type Data = {
+export type Data = {
   settings: Settings;
   products: Product[];
   users: User[];
@@ -105,6 +109,7 @@ type Data = {
   activity: Activity[];
   payments: Payment[];
   withdrawals: Withdrawal[];
+  giftCodes: StoredGiftCode[];
 };
 
 const defaultProducts: Product[] = [
@@ -131,6 +136,7 @@ const defaultSettings: Settings = {
   airtelNumber: "0743240195",
   mtnNumber: "0764312328",
   payeeName: "Nakaliiba Martha",
+  termsText: "",
 };
 
 const dataFile = path.resolve(
@@ -165,6 +171,7 @@ function readData(): Data {
       activity: Array.isArray(raw.activity) ? raw.activity : [],
       payments: Array.isArray(raw.payments) ? raw.payments : [],
       withdrawals: Array.isArray(raw.withdrawals) ? raw.withdrawals : [],
+      giftCodes: Array.isArray(raw.giftCodes) ? raw.giftCodes : [],
     };
   } catch {
     return {
@@ -176,6 +183,7 @@ function readData(): Data {
       activity: [],
       payments: [],
       withdrawals: [],
+      giftCodes: [],
     };
   }
 }
@@ -195,7 +203,14 @@ function verifyPassword(password: string, user: User) {
   try {
     const expected = Buffer.from(user.passwordHash, "hex");
     const actual = crypto.scryptSync(password, user.passwordSalt, 64);
-    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    if (expected.length === actual.length && crypto.timingSafeEqual(expected, actual)) return true;
+    // Old registrations trimmed passwords. New/changed passwords are always
+    // exact strings, and must never be accepted through the legacy fallback.
+    if (user.passwordFormat !== "raw" && password !== password.trim()) {
+      const legacy = crypto.scryptSync(password.trim(), user.passwordSalt, 64);
+      return expected.length === legacy.length && crypto.timingSafeEqual(expected, legacy);
+    }
+    return false;
   } catch {
     return false;
   }
@@ -217,6 +232,11 @@ function publicUser(user: User) {
 function bodyString(req: Request, key: string) {
   const value = (req.body as Record<string, unknown> | undefined)?.[key];
   return typeof value === "string" ? value.trim() : "";
+}
+
+function bodyPassword(req: Request) {
+  const value = (req.body as Record<string, unknown> | undefined)?.password;
+  return typeof value === "string" ? value : "";
 }
 
 function bodyNumber(req: Request, key: string) {
@@ -382,16 +402,34 @@ function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
 
 const router: IRouter = Router();
 
+registerAccountRoutes(router, {
+  readData,
+  writeData,
+  requireUser,
+  requireAdmin,
+  hashPassword,
+  verifyPassword,
+  addTransaction,
+  id,
+  now,
+  revokeOtherSessions(req, userId) {
+    const currentToken = cookieValue(req, "gc_user");
+    for (const [token, session] of userSessions) {
+      if (session.userId === userId && token !== currentToken) userSessions.delete(token);
+    }
+  },
+});
+
 router.get("/settings", (_req, res) => res.json(readData().settings));
 router.get("/products", (_req, res) => res.json(readData().products));
 
 router.post("/auth/register", (req, res) => {
   const data = readData();
   const phone = bodyString(req, "phone");
-  const password = bodyString(req, "password");
+  const password = bodyPassword(req);
   const referralCode = bodyString(req, "referralCode").toUpperCase();
-  if (!/^\+?[0-9]{7,15}$/.test(phone) || password.length < 8) {
-    return res.status(400).json({ error: "Use a valid phone number and a password of at least 8 characters" });
+  if (!/^\+?[0-9]{7,15}$/.test(phone) || password.length < 8 || password.length > 128) {
+    return res.status(400).json({ error: "Use a valid phone number and a password of 8–128 characters" });
   }
   if (data.users.some((user) => user.phone === phone)) {
     return res.status(409).json({ error: "An account with that phone already exists" });
@@ -406,6 +444,7 @@ router.post("/auth/register", (req, res) => {
     phone,
     passwordHash: passwordParts.hash,
     passwordSalt: passwordParts.salt,
+    passwordFormat: "raw",
     referralCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
     referredBy: parent?.id ?? null,
     wallet: 2100,
@@ -430,7 +469,7 @@ router.post("/auth/login", (req, res) => {
   }
   const data = readData();
   const user = data.users.find((item) => item.phone === bodyString(req, "phone"));
-  if (!user || !verifyPassword(bodyString(req, "password"), user)) {
+  if (!user || user.banned || !verifyPassword(bodyPassword(req), user)) {
     return res.status(401).json({ error: "Invalid phone or password" });
   }
   const token = crypto.randomBytes(32).toString("hex");
@@ -832,9 +871,21 @@ router.delete("/admin/products/:id", (req, res) => {
 
 router.put("/admin/settings", (req, res) => {
   if (!requireAdmin(req, res)) return;
+  const parsed = UpdateAdminSettingsBody.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Enter valid settings; terms text must be at most 20000 characters." });
+  }
   const data = readData();
-  const brand = bodyString(req, "brand");
-  if (brand) data.settings.brand = brand.slice(0, 80);
+  for (const [key, value] of Object.entries(parsed.data)) {
+    if (value !== undefined) {
+      if (key === "brand") {
+        if (!value.trim()) return res.status(400).json({ error: "Brand cannot be blank" });
+        data.settings.brand = value.trim().slice(0, 80);
+      } else {
+        data.settings[key as Exclude<keyof Settings, "brand">] = value;
+      }
+    }
+  }
   writeData(data);
   return res.json(data.settings);
 });

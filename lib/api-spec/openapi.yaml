@@ -492,6 +492,91 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Settings"
+  /account/transactions:
+    get:
+      operationId: getAccountTransactions
+      tags: [account]
+      responses:
+        "200":
+          description: Current member transaction history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Transaction" }
+  /account/password:
+    post:
+      operationId: changeAccountPassword
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordChangeInput" }
+      responses:
+        "200":
+          description: Password changed; other sessions revoked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+  /account/gift-codes/redeem:
+    post:
+      operationId: redeemGiftCode
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GiftRedemptionInput" }
+      responses:
+        "200":
+          description: Gift credited to wallet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftRedemptionResponse" }
+  /admin/gift-codes:
+    get:
+      operationId: getAdminGiftCodes
+      tags: [admin]
+      responses:
+        "200":
+          description: Gift codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GiftCode" }
+    post:
+      operationId: createAdminGiftCode
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GiftCodeInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftCode" }
+  /admin/gift-codes/{id}:
+    patch:
+      operationId: updateAdminGiftCode
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GiftCodeUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftCode" }
 components:
   parameters:
     Id:
@@ -501,6 +586,49 @@ components:
       schema:
         type: string
   schemas:
+    PasswordChangeInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, minLength: 1, maxLength: 128 }
+        newPassword: { type: string, minLength: 8, maxLength: 128 }
+    GiftRedemptionInput:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, minLength: 3, maxLength: 40 }
+    GiftRedemptionResponse:
+      type: object
+      required: [ok, amount, wallet]
+      properties:
+        ok: { type: boolean }
+        amount: { type: integer }
+        wallet: { type: number }
+    GiftCodeInput:
+      type: object
+      required: [code, amount, maxRedemptions]
+      properties:
+        code: { type: string, minLength: 3, maxLength: 40, pattern: "^[A-Za-z0-9-]+$" }
+        amount: { type: integer, minimum: 1, maximum: 100000000 }
+        maxRedemptions: { type: integer, minimum: 1, maximum: 100000 }
+        expiresAt: { type: ["string", "null"], format: date-time }
+    GiftCodeUpdate:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+    GiftCode:
+      type: object
+      required: [id, code, amount, maxRedemptions, redemptionCount, enabled, createdAt, expiresAt]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        amount: { type: integer }
+        maxRedemptions: { type: integer }
+        redemptionCount: { type: integer }
+        enabled: { type: boolean }
+        createdAt: { type: string }
+        expiresAt: { type: ["string", "null"] }
     HealthStatus:
       type: object
       properties:
@@ -518,6 +646,7 @@ components:
         airtelNumber: { type: string }
         mtnNumber: { type: string }
         payeeName: { type: string }
+        termsText: { type: string }
       required: [brand, currency]
     SettingsInput:
       type: object
@@ -529,6 +658,7 @@ components:
         airtelNumber: { type: string }
         mtnNumber: { type: string }
         payeeName: { type: string }
+        termsText: { type: string, maxLength: 20000 }
     Product:
       type: object
       properties:
