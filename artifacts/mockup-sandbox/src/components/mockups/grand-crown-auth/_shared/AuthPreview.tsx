@@ -56,7 +56,11 @@ function PreviewField({
 }
 
 export function AuthPreview({ variant }: { variant: Variant }) {
-  const [mode, setMode] = useState<Mode>('login');
+  const [mode, setMode] = useState<Mode>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'register'
+      ? 'register'
+      : 'login',
+  );
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');

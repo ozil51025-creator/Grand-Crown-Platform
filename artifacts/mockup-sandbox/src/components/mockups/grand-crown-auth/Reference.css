@@ -48,6 +48,15 @@
   left: 18px;
   justify-content: flex-end;
 }
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-form-top {
+  right: auto;
+  left: 18px;
+  justify-content: flex-start;
+}
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-form-top {
+  right: 18px;
+  left: auto;
+}
 .gc-auth-reference-wrap .gc-auth-small-logo,
 .gc-auth-reference-wrap .gc-auth-brand-logo {
   display: none;
@@ -262,14 +271,14 @@
   .gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-frame {
     display: grid;
     width: 100%;
-    height: min(390px, calc(100dvh - 100px));
-    min-height: 340px;
+    height: min(340px, calc(100dvh - 100px));
+    min-height: 310px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     flex-direction: initial;
   }
   .gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-frame {
-    height: min(430px, calc(100dvh - 100px));
-    min-height: 370px;
+    height: min(390px, calc(100dvh - 100px));
+    min-height: 350px;
   }
   .gc-auth-reference-wrap .gc-auth-form-panel {
     order: initial;
@@ -278,9 +287,9 @@
   }
   .gc-auth-reference-wrap .gc-auth-form-top {
     top: 8px;
-    right: 9px;
-    left: auto;
   }
+  .gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-form-top { right: auto; left: 9px; }
+  .gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-form-top { right: 9px; left: auto; }
   .gc-auth-reference-wrap .gc-auth-admin {
     min-height: 24px;
     gap: 4px;
