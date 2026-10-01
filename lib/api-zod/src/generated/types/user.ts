@@ -15,4 +15,5 @@ export interface User {
   createdAt: string;
   /** @nullable */
   lastCheckin?: string | null;
+  banned: boolean;
 }

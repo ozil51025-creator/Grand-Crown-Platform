@@ -23,6 +23,7 @@ type User = {
   totalEarned: number;
   createdAt: string;
   lastCheckin: string | null;
+  banned: boolean;
 };
 
 type Purchase = {
@@ -117,7 +118,7 @@ const defaultProducts: Product[] = [
 const defaultSettings: Settings = {
   brand: "Grand Crown",
   currency: "UGX",
-  supportHandle: "@Doritos1225",
+  supportHandle: "@phio333",
   telegramUrl: "https://t.me/+zNDnaz_xKfdiMTlk",
   airtelNumber: "0743240195",
   mtnNumber: "0764312328",
@@ -148,7 +149,9 @@ function readData(): Data {
     return {
       settings: { ...defaultSettings, ...(raw.settings ?? {}) },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
-      users: Array.isArray(raw.users) ? raw.users : [],
+      users: Array.isArray(raw.users)
+        ? raw.users.map((user) => ({ ...user, banned: Boolean(user.banned) }))
+        : [],
       purchases: Array.isArray(raw.purchases) ? raw.purchases : [],
       transactions: Array.isArray(raw.transactions) ? raw.transactions : [],
       activity: Array.isArray(raw.activity) ? raw.activity : [],
@@ -199,6 +202,7 @@ function publicUser(user: User) {
     totalEarned: user.totalEarned,
     createdAt: user.createdAt,
     lastCheckin: user.lastCheckin,
+    banned: user.banned,
   };
 }
 
@@ -236,7 +240,8 @@ function currentUser(req: Request, data: Data) {
     if (token) userSessions.delete(token);
     return undefined;
   }
-  return data.users.find((user) => user.id === session.userId);
+  const user = data.users.find((item) => item.id === session.userId);
+  return user?.banned ? undefined : user;
 }
 
 function isAdmin(req: Request) {
@@ -399,6 +404,7 @@ router.post("/auth/register", (req, res) => {
     totalEarned: 2100,
     createdAt: now(),
     lastCheckin: null,
+    banned: false,
   };
   data.users.push(user);
   addTransaction(data, user.id, "signup_bonus", 2100);
@@ -626,6 +632,78 @@ router.get("/admin/dashboard", (req, res) => {
 router.get("/admin/users", (req, res) => {
   if (!requireAdmin(req, res)) return;
   return res.json(readData().users.map(publicUser));
+});
+
+router.post("/admin/users/:id/credit", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const data = readData();
+  const user = data.users.find((item) => item.id === req.params.id);
+  const amount = bodyNumber(req, "amount");
+  const note = bodyString(req, "note");
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (!Number.isFinite(amount) || amount < 1) return res.status(400).json({ error: "Credit amount must be at least UGX 1" });
+  user.wallet += amount;
+  user.totalEarned += amount;
+  addTransaction(data, user.id, "admin_credit", amount);
+  data.activity.push({ id: id("ACT"), userId: user.id, type: note ? `admin_credit:${note.slice(0, 80)}` : "admin_credit", createdAt: now() });
+  writeData(data);
+  return res.json({ ok: true, user: publicUser(user) });
+});
+
+router.post("/admin/users/:id/debit", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const data = readData();
+  const user = data.users.find((item) => item.id === req.params.id);
+  const amount = bodyNumber(req, "amount");
+  const note = bodyString(req, "note");
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (!Number.isFinite(amount) || amount < 1) return res.status(400).json({ error: "Debit amount must be at least UGX 1" });
+  if (amount > user.wallet) return res.status(400).json({ error: "Debit amount cannot exceed the user's balance" });
+  user.wallet -= amount;
+  addTransaction(data, user.id, "admin_debit", -amount);
+  data.activity.push({ id: id("ACT"), userId: user.id, type: note ? `admin_debit:${note.slice(0, 80)}` : "admin_debit", createdAt: now() });
+  writeData(data);
+  return res.json({ ok: true, user: publicUser(user) });
+});
+
+router.put("/admin/users/:id/ban", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const data = readData();
+  const user = data.users.find((item) => item.id === req.params.id);
+  const banned = (req.body as Record<string, unknown> | undefined)?.banned;
+  if (!user) return res.status(404).json({ error: "User not found" });
+  if (typeof banned !== "boolean") return res.status(400).json({ error: "Banned must be true or false" });
+  user.banned = banned;
+  if (banned) {
+    for (const [token, session] of userSessions) {
+      if (session.userId === user.id) userSessions.delete(token);
+    }
+  }
+  data.activity.push({ id: id("ACT"), userId: user.id, type: banned ? "user_banned" : "user_unbanned", createdAt: now() });
+  writeData(data);
+  return res.json({ ok: true, user: publicUser(user) });
+});
+
+router.delete("/admin/users/:id", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const data = readData();
+  const userIndex = data.users.findIndex((item) => item.id === req.params.id);
+  if (userIndex < 0) return res.status(404).json({ error: "User not found" });
+  const userId = req.params.id;
+  data.users.splice(userIndex, 1);
+  for (const user of data.users) {
+    if (user.referredBy === userId) user.referredBy = null;
+  }
+  data.purchases = data.purchases.filter((item) => item.userId !== userId);
+  data.payments = data.payments.filter((item) => item.userId !== userId);
+  data.withdrawals = data.withdrawals.filter((item) => item.userId !== userId);
+  data.transactions = data.transactions.filter((item) => item.userId !== userId);
+  data.activity = data.activity.filter((item) => item.userId !== userId);
+  for (const [token, session] of userSessions) {
+    if (session.userId === userId) userSessions.delete(token);
+  }
+  writeData(data);
+  return res.json({ ok: true });
 });
 router.get("/admin/payments", (req, res) => {
   if (!requireAdmin(req, res)) return;

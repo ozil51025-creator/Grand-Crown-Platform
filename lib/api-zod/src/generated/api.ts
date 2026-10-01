@@ -60,7 +60,8 @@ export const RegisterUserResponse = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 })
 })
 
@@ -79,7 +80,8 @@ export const LoginUserResponse = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 })
 })
 
@@ -98,7 +100,8 @@ export const GetCurrentUserResponse = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 }),zod.null()]).optional()
 })
 
@@ -111,7 +114,8 @@ export const GetDashboardResponse = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 }),
   "purchases": zod.array(zod.object({
   "id": zod.string(),
@@ -144,7 +148,8 @@ export const ClaimCheckinResponse = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 })
 })
 
@@ -288,9 +293,100 @@ export const GetAdminUsersResponseItem = zod.object({
   "wallet": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
-  "lastCheckin": zod.string().nullish()
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
 })
 export const GetAdminUsersResponse = zod.array(GetAdminUsersResponseItem)
+
+
+export const CreditUserParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+export const creditUserBodyNoteMax = 160;
+
+
+
+export const CreditUserBody = zod.object({
+  "amount": zod.number().min(1),
+  "note": zod.string().max(creditUserBodyNoteMax).optional()
+})
+
+export const CreditUserResponse = zod.object({
+  "ok": zod.boolean(),
+  "user": zod.object({
+  "id": zod.string(),
+  "phone": zod.string(),
+  "referralCode": zod.string(),
+  "wallet": zod.number(),
+  "totalEarned": zod.number(),
+  "createdAt": zod.string(),
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
+})
+})
+
+
+export const DebitUserParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+
+export const debitUserBodyNoteMax = 160;
+
+
+
+export const DebitUserBody = zod.object({
+  "amount": zod.number().min(1),
+  "note": zod.string().max(debitUserBodyNoteMax).optional()
+})
+
+export const DebitUserResponse = zod.object({
+  "ok": zod.boolean(),
+  "user": zod.object({
+  "id": zod.string(),
+  "phone": zod.string(),
+  "referralCode": zod.string(),
+  "wallet": zod.number(),
+  "totalEarned": zod.number(),
+  "createdAt": zod.string(),
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
+})
+})
+
+
+export const BanUserParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const BanUserBody = zod.object({
+  "banned": zod.boolean()
+})
+
+export const BanUserResponse = zod.object({
+  "ok": zod.boolean(),
+  "user": zod.object({
+  "id": zod.string(),
+  "phone": zod.string(),
+  "referralCode": zod.string(),
+  "wallet": zod.number(),
+  "totalEarned": zod.number(),
+  "createdAt": zod.string(),
+  "lastCheckin": zod.string().nullish(),
+  "banned": zod.boolean()
+})
+})
+
+
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteUserResponse = zod.object({
+  "ok": zod.boolean()
+})
 
 
 export const GetAdminPaymentsResponseItem = zod.object({

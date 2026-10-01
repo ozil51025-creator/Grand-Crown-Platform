@@ -1,8 +1,8 @@
 {
   "settings": {
-    "brand": "Grand Crown",
+    "brand": "SAMSUNG",
     "currency": "UGX",
-    "supportHandle": "@Doritos1225",
+    "supportHandle": "@phio333",
     "telegramUrl": "https://t.me/+zNDnaz_xKfdiMTlk",
     "airtelNumber": "0743240195",
     "mtnNumber": "0764312328",
@@ -10,214 +10,195 @@
   },
   "products": [
     {
-      "id": "PROD-1",
-      "name": "Guest Room",
-      "price": 22000,
-      "daily": 4400,
-      "total": 396000,
-      "days": 90
+      "id": "PROD-DE8DE5C10F9BA0",
+      "name": "Garden view",
+      "price": 19000,
+      "daily": 912,
+      "total": 34656,
+      "days": 38
     },
     {
-      "id": "PROD-2",
-      "name": "Deluxe Room",
-      "price": 66000,
-      "daily": 14000,
-      "total": 1260000,
-      "days": 90
+      "id": "PROD-E251AC9BCF56AD",
+      "name": "Mountain view",
+      "price": 30000,
+      "daily": 2400,
+      "total": 72000,
+      "days": 30
     },
     {
-      "id": "PROD-3",
-      "name": "Executive Room",
-      "price": 200000,
-      "daily": 45000,
-      "total": 4050000,
-      "days": 90
+      "id": "PROD-98228A84920079",
+      "name": "Ocean view",
+      "price": 50000,
+      "daily": 4000,
+      "total": 120000,
+      "days": 30
     },
     {
-      "id": "PROD-4",
-      "name": "Deluxe Suite",
-      "price": 600000,
-      "daily": 145000,
-      "total": 13050000,
-      "days": 90
+      "id": "PROD-21C94E174FE2DF",
+      "name": "Executive room",
+      "price": 115000,
+      "daily": 9200,
+      "total": 294400,
+      "days": 32
     },
     {
-      "id": "PROD-5",
-      "name": "Executive Suite",
-      "price": 1800000,
-      "daily": 466000,
-      "total": 41940000,
-      "days": 90
+      "id": "PROD-DD16A809516F98",
+      "name": "Deluxe room",
+      "price": 250000,
+      "daily": 32500,
+      "total": 650000,
+      "days": 20
+    },
+    {
+      "id": "PROD-73196682E8226D",
+      "name": "Sunset view",
+      "price": 370000,
+      "daily": 55500,
+      "total": 999000,
+      "days": 18
+    },
+    {
+      "id": "PROD-FE8B418345FB91",
+      "name": "Family suite",
+      "price": 550000,
+      "daily": 82500,
+      "total": 1650000,
+      "days": 20
+    },
+    {
+      "id": "PROD-55A12A1EE19A05",
+      "name": "Silver suite",
+      "price": 775000,
+      "daily": 116250,
+      "total": 2325000,
+      "days": 20
+    },
+    {
+      "id": "PROD-3B1DFE21C849A8",
+      "name": "Honeymoon",
+      "price": 1650000,
+      "daily": 247500,
+      "total": 4950000,
+      "days": 20
+    },
+    {
+      "id": "PROD-E54F11D607A952",
+      "name": "GOLDEN SUITE",
+      "price": 3000000,
+      "daily": 540000,
+      "total": 9180000,
+      "days": 17
+    },
+    {
+      "id": "PROD-E48F5484BD9C9B",
+      "name": "DIAMOND SUITE",
+      "price": 5000000,
+      "daily": 1000000,
+      "total": 10000000,
+      "days": 10
+    },
+    {
+      "id": "PROD-0D849078AC63B3",
+      "name": "Royal suite",
+      "price": 8000000,
+      "daily": 1600000,
+      "total": 16000000,
+      "days": 10
+    },
+    {
+      "id": "PROD-58FFA0CCA12CB4",
+      "name": "PRESIDENTIAL SUITE",
+      "price": 12000000,
+      "daily": 3000000,
+      "total": 45000000,
+      "days": 15
     }
   ],
   "users": [
     {
-      "id": "USR-462DC0C90DB07C",
-      "phone": "0700006653",
-      "passwordHash": "e9c92afb15264746a63529ab56729e047e9dd57315058016c487d7dd95121dbd5882b3c27d43acab6d8e015863170bf8b0a3015b72eef3a932b7fe28dce653a1",
-      "passwordSalt": "7b7c8d361d2050f365c3cb3c0fe5f947",
-      "referralCode": "A9FBAB8E",
+      "id": "USR-58C7EEDD9D3F4D",
+      "phone": "0743240195",
+      "passwordHash": "7f7ad20bbeb8dfd84065be76e8b019f598cb5ae9c43a2c3e3f8566c5d8c0b5c2ff691bc19d5aa9e81288cdd3c45f58a0f1f8453b79aa815f3ac138e6e8c8f78e",
+      "passwordSalt": "96ae4cfa9975cbd8823959b03f7d1317",
+      "referralCode": "752D0F07",
       "referredBy": null,
       "wallet": 2100,
       "totalEarned": 2100,
-      "createdAt": "2026-09-19T05:44:13.544Z",
-      "lastCheckin": null
+      "createdAt": "2026-09-24T09:23:03.908Z",
+      "lastCheckin": null,
+      "banned": false
     },
     {
-      "id": "USR-9DE294901C32E9",
-      "phone": "0743240195",
-      "passwordHash": "72ffdc30acacde2e904d8b16ec5d1b164517c8d7cdcc015a67c3eb1fd33615331899a06f0d65bfcfcd61ef79f2567aa2210b5c57886a395bb678338770a6a06a",
-      "passwordSalt": "7769e821488b661af93e23ea639d1d75",
-      "referralCode": "83ACD097",
+      "id": "USR-A6E1212CDE5EF0",
+      "phone": "0743240193",
+      "passwordHash": "4b9b78e8aaab236d4e354ea4696d8353b99accef63241b1dc1f796245c627bb83f165924820f166e9851a9703a13edb1449d44b7757efe6397b5f270540cdada",
+      "passwordSalt": "5c4540053a678dc64befaf7b39a396cb",
+      "referralCode": "E7DC9382",
       "referredBy": null,
-      "wallet": 3100,
-      "totalEarned": 3100,
-      "createdAt": "2026-09-19T05:47:10.137Z",
-      "lastCheckin": "2026-09-20"
+      "wallet": 2100,
+      "totalEarned": 2100,
+      "createdAt": "2026-09-24T18:03:28.556Z",
+      "lastCheckin": null,
+      "banned": false
     },
     {
-      "id": "USR-AC88432CF8867E",
-      "phone": "0719880512",
-      "passwordHash": "3cf258c9503cd1847559d4b309fa8ac58b5c07b635c9dbca0e864d4bd9e8c266963df11aaff865652ee83694a63ae28a98feed1d27d51415fbf4d23dfc971162",
-      "passwordSalt": "dbb3344620ae1107a66a5f68ad358bb3",
-      "referralCode": "9CCEED7D",
+      "id": "USR-17B5675666A15F",
+      "phone": "0743240125",
+      "passwordHash": "5c8a9d38153541eae2a7cbc0a10c50e53b1bf9714094aaae7de4f647a3fbb20b1bc01b80c87380a6b00200c3b4b1dce46d0228238dbd8aa44d70cbea2d3f0ba7",
+      "passwordSalt": "b6b977011574b31bf5f1b5da13136816",
+      "referralCode": "468CBF49",
       "referredBy": null,
-      "wallet": 2600,
-      "totalEarned": 2600,
-      "createdAt": "2026-09-20T05:01:52.667Z",
-      "lastCheckin": "2026-09-20"
+      "wallet": 2100,
+      "totalEarned": 2100,
+      "createdAt": "2026-09-26T02:44:51.643Z",
+      "lastCheckin": null,
+      "banned": false
     }
   ],
-  "purchases": [
-    {
-      "id": "PUR-EB7029FFB620A7",
-      "paymentId": "PAY-683461A0EF0786",
-      "userId": "USR-462DC0C90DB07C",
-      "productId": "PROD-1",
-      "productName": "Guest Room",
-      "amount": 22000,
-      "status": "active",
-      "purchasedAt": "2026-09-19T05:44:13.617Z",
-      "earningsCredited": 0
-    }
-  ],
+  "purchases": [],
   "transactions": [
     {
-      "id": "TX-B839872B7C3DCC",
-      "userId": "USR-462DC0C90DB07C",
+      "id": "TX-5573BD4763ED96",
+      "userId": "USR-58C7EEDD9D3F4D",
       "type": "signup_bonus",
       "amount": 2100,
-      "createdAt": "2026-09-19T05:44:13.544Z"
+      "createdAt": "2026-09-24T09:23:03.908Z"
     },
     {
-      "id": "TX-1260A826419D83",
-      "userId": "USR-462DC0C90DB07C",
-      "type": "purchase",
-      "amount": 22000,
-      "createdAt": "2026-09-19T05:44:13.618Z",
-      "paymentId": "PAY-683461A0EF0786",
-      "purchaseId": "PUR-EB7029FFB620A7"
-    },
-    {
-      "id": "TX-FAF8267C8622F5",
-      "userId": "USR-9DE294901C32E9",
+      "id": "TX-760965CA85F0EF",
+      "userId": "USR-A6E1212CDE5EF0",
       "type": "signup_bonus",
       "amount": 2100,
-      "createdAt": "2026-09-19T05:47:10.137Z"
+      "createdAt": "2026-09-24T18:03:28.556Z"
     },
     {
-      "id": "TX-BE90E504128684",
-      "userId": "USR-9DE294901C32E9",
-      "type": "checkin",
-      "amount": 500,
-      "createdAt": "2026-09-19T05:47:26.756Z"
-    },
-    {
-      "id": "TX-E35DF0F060015A",
-      "userId": "USR-9DE294901C32E9",
-      "type": "checkin",
-      "amount": 500,
-      "createdAt": "2026-09-20T04:55:45.407Z"
-    },
-    {
-      "id": "TX-FDB58DB0F3A2AB",
-      "userId": "USR-AC88432CF8867E",
+      "id": "TX-61EA3CF4DD7D55",
+      "userId": "USR-17B5675666A15F",
       "type": "signup_bonus",
       "amount": 2100,
-      "createdAt": "2026-09-20T05:01:52.668Z"
-    },
-    {
-      "id": "TX-4B1A8C1DDDE182",
-      "userId": "USR-AC88432CF8867E",
-      "type": "checkin",
-      "amount": 500,
-      "createdAt": "2026-09-20T05:01:52.689Z"
+      "createdAt": "2026-09-26T02:44:51.643Z"
     }
   ],
   "activity": [
     {
-      "id": "ACT-51EFDFD211B16B",
-      "userId": "USR-462DC0C90DB07C",
+      "id": "ACT-426D399C3F319C",
+      "userId": "USR-58C7EEDD9D3F4D",
       "type": "signup",
-      "createdAt": "2026-09-19T05:44:13.544Z"
+      "createdAt": "2026-09-24T09:23:03.908Z"
     },
     {
-      "id": "ACT-2426BD917CBE18",
-      "userId": "USR-462DC0C90DB07C",
-      "type": "payment_submitted",
-      "createdAt": "2026-09-19T05:44:13.592Z"
-    },
-    {
-      "id": "ACT-A869FEC75522FE",
-      "userId": "USR-462DC0C90DB07C",
-      "type": "payment_approved",
-      "createdAt": "2026-09-19T05:44:13.618Z"
-    },
-    {
-      "id": "ACT-9C07E350F641D2",
-      "userId": "USR-9DE294901C32E9",
+      "id": "ACT-68D40C67B137E9",
+      "userId": "USR-A6E1212CDE5EF0",
       "type": "signup",
-      "createdAt": "2026-09-19T05:47:10.137Z"
+      "createdAt": "2026-09-24T18:03:28.556Z"
     },
     {
-      "id": "ACT-4BA09C043D8CD2",
-      "userId": "USR-AC88432CF8867E",
+      "id": "ACT-6B7D50F7D11BE8",
+      "userId": "USR-17B5675666A15F",
       "type": "signup",
-      "createdAt": "2026-09-20T05:01:52.668Z"
-    },
-    {
-      "id": "ACT-C4894399AC701D",
-      "userId": "USR-AC88432CF8867E",
-      "type": "payment_submitted",
-      "createdAt": "2026-09-20T05:01:52.726Z"
+      "createdAt": "2026-09-26T02:44:51.643Z"
     }
   ],
-  "payments": [
-    {
-      "id": "PAY-683461A0EF0786",
-      "userId": "USR-462DC0C90DB07C",
-      "productId": "PROD-1",
-      "productName": "Guest Room",
-      "amount": 22000,
-      "method": "MTN Mobile Money",
-      "payerPhone": "0700006653",
-      "transactionId": "TEST-1789796653",
-      "status": "approved",
-      "createdAt": "2026-09-19T05:44:13.592Z",
-      "reviewedAt": "2026-09-19T05:44:13.617Z"
-    },
-    {
-      "id": "PAY-836568673DC46B",
-      "userId": "USR-AC88432CF8867E",
-      "productId": "PROD-1",
-      "productName": "Guest Room",
-      "amount": 22000,
-      "method": "MTN Mobile Money",
-      "payerPhone": "0719880512",
-      "transactionId": "VERIFY-1789880512",
-      "status": "pending",
-      "createdAt": "2026-09-20T05:01:52.726Z"
-    }
-  ],
+  "payments": [],
   "withdrawals": []
 }

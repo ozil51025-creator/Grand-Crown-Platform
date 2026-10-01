@@ -6,8 +6,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import {
   useClaimCheckin,
+  useBanUser,
+  useCreditUser,
   useCreateProduct,
+  useDebitUser,
   useDeleteProduct,
+  useDeleteUser,
   useGetAdminActivity,
   useGetAdminDashboard,
   getGetAdminDashboardQueryKey,
@@ -39,7 +43,7 @@ import {
   type Settings,
   type User,
 } from '@workspace/api-client-react';
-import { Activity, ArrowDownToLine, ArrowUpRight, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LogOut, Menu, Package, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, Users, Wallet, X, XCircle } from 'lucide-react';
+import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LogOut, Menu, MessageCircle, Minus, Package, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 
@@ -260,8 +264,10 @@ function ReferralView({ referrals, loading, error, currency }: { referrals?: any
 }
 
 function AccountView({ user, settings, withdrawals, loading, error, currency, onWithdraw }: { user: User; settings?: Settings; withdrawals?: any[]; loading: boolean; error: boolean; currency: string; onWithdraw: () => void }) {
-  const supportUrl = settings?.telegramUrl || `https://t.me/${(settings?.supportHandle || 'GrandCrown').replace(/^@/, '')}`;
-  return <div className="animate-rise"><PageHeading eyebrow="Account" title="Your details." copy="Keep your member information close and follow every withdrawal request through review." action={<div className="flex flex-wrap gap-2"><a data-testid="button-customer-support" href={supportUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"><Link2 className="size-4" /> Customer support</a><Button data-testid="button-account-withdraw" onClick={onWithdraw}><ArrowDownToLine className="size-4" /> Withdraw</Button></div>} /><div className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]"><div className="rounded-3xl border border-border bg-card p-7"><div className="grid size-14 place-items-center rounded-2xl bg-primary font-display text-xl text-accent">{user.phone.slice(-2)}</div><h2 className="mt-5 font-display text-2xl font-semibold">{user.phone}</h2><p className="mt-1 text-sm text-muted-foreground">Member since {shortDate(user.createdAt)}</p><div className="gold-rule my-6" /><div className="space-y-4"><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Referral code</span><span data-testid="text-account-referral-code" className="font-mono font-semibold">{user.referralCode}</span></div><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Available balance</span><span data-testid="text-account-wallet" className="font-mono font-semibold">{money(user.wallet, currency)}</span></div><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Lifetime earned</span><span className="font-mono font-semibold text-accent-foreground">{money(user.totalEarned, currency)}</span></div></div></div><div><h2 className="mb-4 font-display text-2xl font-semibold">Withdrawal history</h2><QueryState loading={loading} error={error} empty={!withdrawals?.length}><div className="space-y-3">{withdrawals?.map(item => <div key={item.id} data-testid={`row-withdrawal-${item.id}`} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-mono font-semibold">{money(item.amount, currency)}</div><div className="mt-1 text-xs text-muted-foreground">{item.method} · {item.phone} · {shortDate(item.createdAt)}</div></div><div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">Net {money(item.netAmount, currency)}</span><StatusPill status={item.status} /></div></div>)}</div></QueryState></div></div></div>;
+  const groupUrl = settings?.telegramUrl || 'https://t.me/+zNDnaz_xKfdiMTlk';
+  const adminHandle = settings?.supportHandle || '@phio333';
+  const adminUrl = `https://t.me/${adminHandle.replace(/^@/, '')}`;
+  return <div className="animate-rise"><PageHeading eyebrow="Account" title="Your details." copy="Keep your member information close and follow every withdrawal request through review." action={<div className="flex flex-wrap gap-2"><a data-testid="button-customer-support-group" href={groupUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"><MessageCircle className="size-4" /> Telegram group</a><a data-testid="button-customer-support-admin" href={adminUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:border-accent hover:bg-accent/10"><UserRound className="size-4" /> Talk to admin {adminHandle}</a><Button data-testid="button-account-withdraw" onClick={onWithdraw}><ArrowDownToLine className="size-4" /> Withdraw</Button></div>} /><div className="grid gap-5 xl:grid-cols-[.85fr_1.15fr]"><div className="rounded-3xl border border-border bg-card p-7"><div className="grid size-14 place-items-center rounded-2xl bg-primary font-display text-xl text-accent">{user.phone.slice(-2)}</div><h2 className="mt-5 font-display text-2xl font-semibold">{user.phone}</h2><p className="mt-1 text-sm text-muted-foreground">Member since {shortDate(user.createdAt)}</p><div className="gold-rule my-6" /><div className="space-y-4"><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Referral code</span><span data-testid="text-account-referral-code" className="font-mono font-semibold">{user.referralCode}</span></div><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Available balance</span><span data-testid="text-account-wallet" className="font-mono font-semibold">{money(user.wallet, currency)}</span></div><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Lifetime earned</span><span className="font-mono font-semibold text-accent-foreground">{money(user.totalEarned, currency)}</span></div></div></div><div><h2 className="mb-4 font-display text-2xl font-semibold">Withdrawal history</h2><QueryState loading={loading} error={error} empty={!withdrawals?.length}><div className="space-y-3">{withdrawals?.map(item => <div key={item.id} data-testid={`row-withdrawal-${item.id}`} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-mono font-semibold">{money(item.amount, currency)}</div><div className="mt-1 text-xs text-muted-foreground">{item.method} · {item.phone} · {shortDate(item.createdAt)}</div></div><div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">Net {money(item.netAmount, currency)}</span><StatusPill status={item.status} /></div></div>)}</div></QueryState></div></div></div>;
 }
 
 function ActivityTable({ transactions, currency }: { transactions: any[]; currency: string }) {
@@ -280,18 +286,18 @@ function WithdrawModal({ balance, currency, values, setValues, onClose, onSubmit
 function AdminShell({ active, setActive, children, onLogout }: { active: string; setActive: (value: string) => void; children: ReactNode; onLogout: () => void }) {
   const items = [
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'analytics', label: 'Analytics', disabled: true },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'deposits', label: 'Deposits', icon: ArrowDownToLine },
     { id: 'withdrawals', label: 'Withdrawals', icon: ArrowUpRight },
     { id: 'products', label: 'Products', icon: Package },
-    { id: 'gift-codes', label: 'Gift Codes', disabled: true },
-    { id: 'messages', label: 'Messages', disabled: true },
+    { id: 'gift-codes', label: 'Gift Codes', icon: Gift },
+    { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'referrals', label: 'Referrals', icon: Gift },
     { id: 'settings', label: 'Settings', icon: Settings2 },
-    { id: 'countries', label: 'Countries', disabled: true },
-    { id: 'admins', label: 'Admins', disabled: true },
+    { id: 'countries', label: 'Countries', icon: Target },
+    { id: 'admins', label: 'Admins', icon: ShieldCheck },
     { id: 'activity', label: 'Activity Log', icon: Activity },
   ];
   return <div className="admin-surface min-h-[100dvh] bg-[#f4f7fb] text-slate-900">
@@ -309,7 +315,7 @@ function AdminShell({ active, setActive, children, onLogout }: { active: string;
         </div>
       </div>
       <nav className="mx-auto flex max-w-[1500px] flex-wrap gap-1.5 border-t border-slate-100 px-4 py-3 sm:gap-2 sm:px-6 lg:px-8">
-        {items.map(item => <button data-testid={`button-admin-nav-${item.id}`} key={item.id} type="button" disabled={item.disabled} title={item.disabled ? 'Coming soon' : undefined} onClick={() => !item.disabled && setActive(item.id)} className={`rounded-full px-3 py-2 text-[13px] font-bold transition sm:px-4 ${active === item.id ? 'bg-[#ef7815] text-white shadow-sm' : item.disabled ? 'cursor-not-allowed text-slate-300' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}>{item.label}</button>)}
+       {items.map(item => <button data-testid={`button-admin-nav-${item.id}`} key={item.id} type="button" onClick={() => setActive(item.id)} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-bold transition sm:px-4 ${active === item.id ? 'bg-[#ef7815] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'}`}><item.icon className="size-3.5" />{item.label}</button>)}
       </nav>
     </header>
     <main className="mx-auto max-w-[1500px] px-0 py-6 sm:px-6 sm:py-8 lg:px-8">{children}</main>
@@ -353,10 +359,17 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const settings = useGetAdminSettings();
   const reviewPayment = useReviewPayment();
   const reviewWithdrawal = useReviewWithdrawal();
+  const creditUser = useCreditUser();
+  const debitUser = useDebitUser();
+  const banUser = useBanUser();
+  const deleteUser = useDeleteUser();
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
   const updateSettings = useUpdateAdminSettings();
-  const [modal, setModal] = useState<'product' | 'settings' | null>(null);
+  const [modal, setModal] = useState<'product' | 'settings' | 'credit' | 'debit' | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [userAmount, setUserAmount] = useState('');
+  const [userNote, setUserNote] = useState('');
   const [product, setProduct] = useState({ name: '', price: '', daily: '', total: '', days: '' });
   const [siteSettings, setSiteSettings] = useState({ brand: '', currency: '', supportHandle: '', telegramUrl: '', airtelNumber: '', mtnNumber: '', payeeName: '' });
   const { toast } = useToast();
@@ -364,17 +377,44 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const approveWithdrawal = (id: string, action: 'approve' | 'reject') => reviewWithdrawal.mutate({ id, data: { action } }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: `Withdrawal ${action}d`, description: 'The withdrawal queue has been updated.' }); } });
   const saveProduct = (event: FormEvent) => { event.preventDefault(); createProduct.mutate({ data: { name: product.name, price: Number(product.price), daily: Number(product.daily), total: Number(product.total), days: Number(product.days) } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); setProduct({ name: '', price: '', daily: '', total: '', days: '' }); toast({ title: 'Product created' }); } }); };
   const saveSettings = (event: FormEvent) => { event.preventDefault(); updateSettings.mutate({ data: siteSettings }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Settings saved' }); } }); };
+  const openUserWallet = (user: any, action: 'credit' | 'debit') => { setSelectedUser(user); setUserAmount(''); setUserNote(''); setModal(action); };
+  const saveUserWallet = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedUser) return;
+    const mutation = modal === 'credit' ? creditUser : debitUser;
+    mutation.mutate({ id: selectedUser.id, data: { amount: Number(userAmount), note: userNote || undefined } }, {
+      onSuccess: () => { queryClient.invalidateQueries(); setModal(null); setSelectedUser(null); toast({ title: `User ${modal}ed`, description: `${selectedUser.phone}'s balance has been updated.` }); },
+    });
+  };
+  const toggleBan = (user: any) => {
+    const nextBanned = !user.banned;
+    if (!window.confirm(`${nextBanned ? 'Ban' : 'Unban'} ${user.phone}?`)) return;
+    banUser.mutate({ id: user.id, data: { banned: nextBanned } }, {
+      onSuccess: () => { queryClient.invalidateQueries(); toast({ title: nextBanned ? 'User banned' : 'User unbanned', description: `${user.phone} can ${nextBanned ? 'no longer' : 'now'} sign in.` }); },
+    });
+  };
+  const removeUser = (user: any) => {
+    if (!window.confirm(`Delete ${user.phone}? This removes the user's account, wallet history, deposits, and withdrawals.`)) return;
+    deleteUser.mutate({ id: user.id }, {
+      onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'User deleted', description: `${user.phone} was removed from the platform.` }); },
+    });
+  };
   let view: ReactNode;
-  if (active === 'users') view = <AdminListPage eyebrow="Member directory" title="Users." copy="Every registered member in the circle." loading={users.isLoading} error={!!users.error} empty={!users.data?.length}><AdminUsers users={users.data || []} /></AdminListPage>;
+  if (active === 'analytics') view = <AdminListPage eyebrow="Platform analytics" title="Analytics." copy="A quick read on balances, deposits, withdrawals, and platform activity." loading={dashboard.isLoading} error={!!dashboard.error}><AdminAnalytics dashboard={dashboard.data} /></AdminListPage>;
+  else if (active === 'users') view = <AdminListPage eyebrow="Member directory" title="Users." copy="Credit, debit, ban, or delete member accounts." loading={users.isLoading} error={!!users.error} empty={!users.data?.length}><AdminUsers users={users.data || []} onCredit={user => openUserWallet(user, 'credit')} onDebit={user => openUserWallet(user, 'debit')} onToggleBan={toggleBan} onDelete={removeUser} /></AdminListPage>;
   else if (active === 'deposits') view = <AdminListPage eyebrow="Manual review" title="Deposits." copy="Verify mobile-money references before activating a plan." loading={payments.isLoading} error={!!payments.error} empty={!payments.data?.length}><AdminPayments payments={payments.data || []} onReview={approvePayment} /></AdminListPage>;
   else if (active === 'withdrawals') view = <AdminListPage eyebrow="Manual payout queue" title="Withdrawals." copy="Review member requests and confirm payments outside this system." loading={withdrawals.isLoading} error={!!withdrawals.error} empty={!withdrawals.data?.length}><AdminWithdrawals withdrawals={withdrawals.data || []} onReview={approveWithdrawal} /></AdminListPage>;
   else if (active === 'products') view = <AdminListPage eyebrow="Earning catalogue" title="Products." copy="Set the fixed earning plans available to members." action={<Button data-testid="button-new-product" onClick={() => setModal('product')}><Plus className="size-4" /> New product</Button>} loading={products.isLoading} error={!!products.error} empty={!products.data?.length}><AdminProducts products={products.data || []} onDelete={(id) => deleteProduct.mutate({ id }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'Product removed' }); } })} /></AdminListPage>;
   else if (active === 'transactions') view = <AdminListPage eyebrow="Ledger" title="Transactions." copy="A complete record of wallet movement." loading={transactions.isLoading} error={!!transactions.error} empty={!transactions.data?.length}><AdminTransactions transactions={transactions.data || []} /></AdminListPage>;
   else if (active === 'referrals') view = <AdminListPage eyebrow="Network health" title="Referrals." copy="The current shape of member-led growth." loading={referrals.isLoading} error={!!referrals.error} empty={!referrals.data}><AdminReferrals referrals={referrals.data} /></AdminListPage>;
+  else if (active === 'gift-codes') view = <AdminInfoPage eyebrow="Member rewards" title="Gift codes." copy="Gift-code management is ready as a dedicated admin area." title2="Gift codes are not active yet" body="No gift codes have been created. When codes are enabled, this is where administrators will create and review them." />;
+  else if (active === 'messages') view = <AdminSupportPage settings={settings.data} />;
+  else if (active === 'countries') view = <AdminInfoPage eyebrow="Platform reach" title="Countries." copy="Review the countries currently supported by the platform." title2="Uganda" body="Grand Crown is currently configured for Uganda and UGX mobile-money payments." />;
+  else if (active === 'admins') view = <AdminInfoPage eyebrow="Access control" title="Admins." copy="Review administrator access for this console." title2="Administrator access is active" body="The current administrator session is active. Add separate administrator accounts when multi-admin access is configured." />;
   else if (active === 'activity') view = <AdminListPage eyebrow="Audit trail" title="Activity." copy="Recent actions across the Grand Crown console." loading={activity.isLoading} error={!!activity.error} empty={!activity.data?.length}><AdminActivity activity={activity.data || []} /></AdminListPage>;
   else if (active === 'settings') view = <AdminListPage eyebrow="Configuration" title="Settings." copy="Control the member-facing payment instructions and brand details." action={<Button data-testid="button-edit-settings" onClick={() => { if (settings.data) setSiteSettings({ ...siteSettings, ...settings.data }); setModal('settings'); }}><Settings2 className="size-4" /> Edit settings</Button>} loading={settings.isLoading} error={!!settings.error}><SettingsCard settings={settings.data} /></AdminListPage>;
   else view = <AdminOverview dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} onReview={() => setActive('deposits')} />;
-  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{modal === 'settings' && <AdminSettingsModal values={siteSettings} setValues={setSiteSettings} onClose={() => setModal(null)} onSubmit={saveSettings} pending={updateSettings.isPending} error={!!updateSettings.error} />}</>;
+  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{modal === 'settings' && <AdminSettingsModal values={siteSettings} setValues={setSiteSettings} onClose={() => setModal(null)} onSubmit={saveSettings} pending={updateSettings.isPending} error={!!updateSettings.error} />}{(modal === 'credit' || modal === 'debit') && selectedUser && <AdminUserWalletModal action={modal} user={selectedUser} amount={userAmount} note={userNote} setAmount={setUserAmount} setNote={setUserNote} onClose={() => { setModal(null); setSelectedUser(null); }} onSubmit={saveUserWallet} pending={creditUser.isPending || debitUser.isPending} error={!!creditUser.error || !!debitUser.error} />}</>;
 }
 
 function AdminListPage({ eyebrow, title, copy, action, loading, error, empty, children }: { eyebrow: string; title: string; copy: string; action?: ReactNode; loading: boolean; error: boolean; empty?: boolean; children: ReactNode }) {
@@ -412,7 +452,38 @@ function AdminOverview({ dashboard, loading, error, onReview }: { dashboard?: an
   </div>;
 }
 
-function AdminUsers({ users }: { users: any[] }) { return <div className="overflow-hidden rounded-3xl border border-border bg-card">{users.map(user => <div key={user.id} data-testid={`row-admin-user-${user.id}`} className="flex flex-col gap-3 border-b border-border p-5 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-full bg-accent/20 font-mono text-xs text-accent-foreground">{user.phone.slice(-2)}</div><div><div className="font-semibold">{user.phone}</div><div className="text-xs text-muted-foreground">Joined {shortDate(user.createdAt)} · Ref {user.referralCode}</div></div></div><div className="flex gap-6 text-right"><div><div className="text-xs text-muted-foreground">Balance</div><div className="font-mono text-sm">{money(user.wallet)}</div></div><div><div className="text-xs text-muted-foreground">Earned</div><div className="font-mono text-sm text-accent-foreground">{money(user.totalEarned)}</div></div></div></div>)}</div>; }
+function AdminUsers({ users, onCredit, onDebit, onToggleBan, onDelete }: { users: any[]; onCredit: (user: any) => void; onDebit: (user: any) => void; onToggleBan: (user: any) => void; onDelete: (user: any) => void }) {
+  return <div className="overflow-hidden rounded-3xl border border-border bg-card">{users.map(user => <div key={user.id} data-testid={`row-admin-user-${user.id}`} className="flex flex-col gap-4 border-b border-border p-5 last:border-0 sm:px-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-3"><div className={`grid size-10 place-items-center rounded-full font-mono text-xs ${user.banned ? 'bg-red-100 text-red-700' : 'bg-accent/20 text-accent-foreground'}`}>{user.phone.slice(-2)}</div><div><div className="flex flex-wrap items-center gap-2 font-semibold"><span>{user.phone}</span>{user.banned && <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-red-700">Banned</span>}</div><div className="text-xs text-muted-foreground">Joined {shortDate(user.createdAt)} · Ref {user.referralCode}</div></div></div><div className="flex flex-wrap items-center gap-5 text-right"><div><div className="text-xs text-muted-foreground">Balance</div><div className="font-mono text-sm">{money(user.wallet)}</div></div><div><div className="text-xs text-muted-foreground">Earned</div><div className="font-mono text-sm text-accent-foreground">{money(user.totalEarned)}</div></div></div></div><div className="flex flex-wrap gap-2 border-t border-border/70 pt-3"><Button data-testid={`button-credit-user-${user.id}`} onClick={() => onCredit(user)} className="min-h-9 bg-emerald-600 px-3 text-xs text-white shadow-none hover:bg-emerald-700"><Plus className="size-3.5" /> Credit</Button><Button data-testid={`button-debit-user-${user.id}`} onClick={() => onDebit(user)} variant="outline" className="min-h-9 px-3 text-xs"><Minus className="size-3.5" /> Debit</Button><Button data-testid={`button-ban-user-${user.id}`} onClick={() => onToggleBan(user)} variant="outline" className="min-h-9 px-3 text-xs"><Ban className="size-3.5" /> {user.banned ? 'Unban' : 'Ban'}</Button><Button data-testid={`button-delete-user-${user.id}`} onClick={() => onDelete(user)} variant="danger" className="min-h-9 px-3 text-xs"><UserX className="size-3.5" /> Delete</Button></div></div>)}</div>;
+}
+
+function AdminAnalytics({ dashboard }: { dashboard?: any }) {
+  const cards = [
+    ['Members', dashboard?.users || 0, false],
+    ['Purchases', dashboard?.purchases || 0, false],
+    ['Pending deposits', dashboard?.payments || 0, false],
+    ['Pending withdrawals', dashboard?.withdrawals || 0, false],
+    ['Wallet balances', money(dashboard?.walletBalances), true],
+    ['Total deposited', money(dashboard?.totalDeposited), true],
+    ['Total withdrawn', money(dashboard?.totalWithdrawn), true],
+    ['Total invested', money(dashboard?.totalInvested), true],
+  ];
+  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, isMoney]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.03)]"><div className={`font-extrabold tracking-tight text-slate-900 ${isMoney ? 'text-xl' : 'text-3xl'}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div><div className="mt-2 text-sm font-medium text-slate-500">{label}</div></div>)}</div>;
+}
+
+function AdminInfoPage({ eyebrow, title, copy, title2, body }: { eyebrow: string; title: string; copy: string; title2: string; body: string }) {
+  return <div className="animate-rise"><PageHeading eyebrow={eyebrow} title={title} copy={copy} /><div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_1px_2px_rgba(15,23,42,.03)]"><div className="grid size-12 place-items-center rounded-2xl bg-[#fff1e7] text-[#ef7815]"><ShieldCheck className="size-5" /></div><h2 className="mt-5 text-2xl font-extrabold tracking-tight text-slate-900">{title2}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">{body}</p></div></div>;
+}
+
+function AdminSupportPage({ settings }: { settings?: Settings }) {
+  const groupUrl = settings?.telegramUrl || 'https://t.me/+zNDnaz_xKfdiMTlk';
+  const handle = settings?.supportHandle || '@phio333';
+  const adminUrl = `https://t.me/${handle.replace(/^@/, '')}`;
+  return <div className="animate-rise"><PageHeading eyebrow="Customer support" title="Messages." copy="Open the two configured Telegram support channels for member conversations." /><div className="grid gap-4 md:grid-cols-2"><a href={groupUrl} target="_blank" rel="noreferrer" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:border-[#ef7815] hover:shadow-sm"><MessageCircle className="size-6 text-[#ef7815]" /><h2 className="mt-5 text-xl font-extrabold text-slate-900">Telegram group</h2><p className="mt-2 text-sm leading-6 text-slate-500">Open the Grand Crown member support group.</p><span className="mt-5 inline-flex text-sm font-bold text-[#ef7815]">Open group <ArrowUpRight className="ml-1 size-4" /></span></a><a href={adminUrl} target="_blank" rel="noreferrer" className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:border-[#ef7815] hover:shadow-sm"><UserRound className="size-6 text-[#ef7815]" /><h2 className="mt-5 text-xl font-extrabold text-slate-900">Talk to admin {handle}</h2><p className="mt-2 text-sm leading-6 text-slate-500">Open a direct Telegram conversation with the administrator.</p><span className="mt-5 inline-flex text-sm font-bold text-[#ef7815]">Message admin <ArrowUpRight className="ml-1 size-4" /></span></a></div></div>;
+}
+
+function AdminUserWalletModal({ action, user, amount, note, setAmount, setNote, onClose, onSubmit, pending, error }: { action: 'credit' | 'debit'; user: any; amount: string; note: string; setAmount: (value: string) => void; setNote: (value: string) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error: boolean }) {
+  return <Modal title={`${action === 'credit' ? 'Credit' : 'Debit'} ${user.phone}`} onClose={onClose}><div className="rounded-2xl bg-secondary p-4 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Current balance</span><span className="font-mono font-semibold">{money(user.wallet)}</span></div><p className="mt-2 text-xs leading-5 text-muted-foreground">{action === 'credit' ? 'The amount will be added to the member wallet and lifetime earned total.' : 'The amount will be removed from the member wallet. Debit cannot exceed the current balance.'}</p></div><form onSubmit={onSubmit} className="mt-6 space-y-4"><Field label="Amount (UGX)" data-testid={`input-${action}-user-amount`} type="number" min="1" max={action === 'debit' ? user.wallet : undefined} value={amount} onChange={e => setAmount(e.target.value)} required /><Field label="Note (optional)" data-testid={`input-${action}-user-note`} placeholder="Reason for this adjustment" value={note} onChange={e => setNote(e.target.value)} />{error && <p className="text-sm text-destructive">The balance adjustment could not be completed. Check the amount and try again.</p>}<Button data-testid={`button-submit-${action}-user`} type="submit" className="w-full" disabled={pending}>{pending ? 'Saving…' : `${action === 'credit' ? 'Credit' : 'Debit'} user`}<Check className="size-4" /></Button></form></Modal>;
+}
 function AdminPayments({ payments, onReview }: { payments: any[]; onReview: (id: string, action: 'approve' | 'reject') => void }) { return <div className="space-y-3">{payments.map(payment => <div key={payment.id} data-testid={`row-admin-payment-${payment.id}`} className="rounded-2xl border border-border bg-card p-5 sm:flex sm:items-center sm:justify-between"><div><div className="font-semibold">{payment.productName} <StatusPill status={payment.status} /></div><div className="mt-2 text-xs text-muted-foreground">{payment.payerPhone} · {payment.method} · Ref <span className="font-mono text-foreground">{payment.transactionId}</span></div><div className="mt-1 text-xs text-muted-foreground">Submitted {shortDate(payment.createdAt)}</div></div><div className="mt-4 flex items-center gap-2 sm:mt-0">{payment.status === 'pending' ? <><Button data-testid={`button-approve-payment-${payment.id}`} onClick={() => onReview(payment.id, 'approve')} className="bg-accent text-primary hover:bg-accent/90"><Check className="size-4" /> Approve</Button><Button data-testid={`button-reject-payment-${payment.id}`} onClick={() => onReview(payment.id, 'reject')} variant="outline"><X className="size-4" /> Reject</Button></> : <span className="text-xs text-muted-foreground">Reviewed {shortDate(payment.reviewedAt)}</span>}</div></div>)}</div>; }
 function AdminWithdrawals({ withdrawals, onReview }: { withdrawals: any[]; onReview: (id: string, action: 'approve' | 'reject') => void }) { return <div className="space-y-3">{withdrawals.map(item => <div key={item.id} data-testid={`row-admin-withdrawal-${item.id}`} className="rounded-2xl border border-border bg-card p-5 sm:flex sm:items-center sm:justify-between"><div><div className="font-mono text-lg font-semibold">{money(item.amount)}</div><div className="mt-1 text-xs text-muted-foreground">{item.phone} · {item.method} · Net {money(item.netAmount)}</div><div className="mt-1 text-xs text-muted-foreground">Requested {shortDate(item.createdAt)}</div></div><div className="mt-4 flex items-center gap-2 sm:mt-0">{item.status === 'pending' ? <><Button data-testid={`button-approve-withdrawal-${item.id}`} onClick={() => onReview(item.id, 'approve')} className="bg-accent text-primary hover:bg-accent/90"><Check className="size-4" /> Mark paid</Button><Button data-testid={`button-reject-withdrawal-${item.id}`} onClick={() => onReview(item.id, 'reject')} variant="outline"><X className="size-4" /> Reject</Button></> : <StatusPill status={item.status} />}</div></div>)}</div>; }
 function AdminProducts({ products, onDelete }: { products: Product[]; onDelete: (id: string) => void }) { return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{products.map(product => <div key={product.id} data-testid={`card-admin-product-${product.id}`} className="rounded-3xl border border-border bg-card p-6"><div className="flex items-start justify-between"><div className="grid size-10 place-items-center rounded-xl bg-primary text-accent"><Crown className="size-4" /></div><button data-testid={`button-delete-product-${product.id}`} onClick={() => { if (window.confirm(`Remove ${product.name}?`)) onDelete(product.id); }} className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></button></div><h2 className="mt-6 font-display text-2xl font-semibold">{product.name}</h2><div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><span className="text-xs text-muted-foreground">Price</span><div className="font-mono">{money(product.price)}</div></div><div><span className="text-xs text-muted-foreground">Daily</span><div className="font-mono text-accent-foreground">{money(product.daily)}</div></div><div><span className="text-xs text-muted-foreground">Total</span><div className="font-mono">{money(product.total)}</div></div><div><span className="text-xs text-muted-foreground">Term</span><div className="font-mono">{product.days} days</div></div></div></div>)}</div>; }

@@ -61,6 +61,7 @@ export interface User {
   createdAt: string;
   /** @nullable */
   lastCheckin?: string | null;
+  banned: boolean;
 }
 
 export interface RegisterInput {
@@ -93,6 +94,22 @@ export interface SessionResponse {
 
 export interface OkResponse {
   ok: boolean;
+}
+
+export interface AdminWalletActionInput {
+  /** @minimum 1 */
+  amount: number;
+  /** @maxLength 160 */
+  note?: string;
+}
+
+export interface BanUserInput {
+  banned: boolean;
+}
+
+export interface UserActionResponse {
+  ok: boolean;
+  user: User;
 }
 
 export interface Purchase {

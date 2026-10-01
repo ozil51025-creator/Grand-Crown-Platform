@@ -24,7 +24,9 @@ import type {
   AdminDashboard,
   AdminLoginInput,
   AdminReferralSummary,
+  AdminWalletActionInput,
   AuthResponse,
+  BanUserInput,
   CheckinResponse,
   Dashboard,
   HealthStatus,
@@ -44,6 +46,7 @@ import type {
   SettingsInput,
   Transaction,
   User,
+  UserActionResponse,
   Withdrawal,
   WithdrawalInput,
   WithdrawalResponse
@@ -1406,6 +1409,323 @@ export function useGetAdminUsers<TData = Awaited<ReturnType<typeof getAdminUsers
 
 
 
+
+export const getCreditUserUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/credit`
+}
+
+export const creditUser = async (id: string,
+    adminWalletActionInput: AdminWalletActionInput, options?: Parameters<typeof customFetch>[1]): Promise<UserActionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UserActionResponse>(getCreditUserUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminWalletActionInput)
+  }
+);}
+
+
+
+
+
+export const getCreditUserMutationKey = () => ['creditUser'] as const;
+
+export const getCreditUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof creditUser>>, TError,CreditUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof creditUser>>, TError,CreditUserMutationVariables, TContext> => {
+
+const mutationKey = getCreditUserMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof creditUser>>, CreditUserMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  creditUser(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreditUserMutationResult = NonNullable<Awaited<ReturnType<typeof creditUser>>>
+    export type CreditUserMutationBody = BodyType<AdminWalletActionInput>
+    export type CreditUserMutationError = ErrorType<unknown>
+    export type CreditUserMutationVariables = {id: string;data: BodyType<AdminWalletActionInput>}
+
+    export const useCreditUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof creditUser>>, TError,CreditUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof creditUser>>,
+        TError,
+        CreditUserMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreditUserMutationOptions(options));
+    }
+
+export const getDebitUserUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/debit`
+}
+
+export const debitUser = async (id: string,
+    adminWalletActionInput: AdminWalletActionInput, options?: Parameters<typeof customFetch>[1]): Promise<UserActionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UserActionResponse>(getDebitUserUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adminWalletActionInput)
+  }
+);}
+
+
+
+
+
+export const getDebitUserMutationKey = () => ['debitUser'] as const;
+
+export const getDebitUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debitUser>>, TError,DebitUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof debitUser>>, TError,DebitUserMutationVariables, TContext> => {
+
+const mutationKey = getDebitUserMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof debitUser>>, DebitUserMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  debitUser(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DebitUserMutationResult = NonNullable<Awaited<ReturnType<typeof debitUser>>>
+    export type DebitUserMutationBody = BodyType<AdminWalletActionInput>
+    export type DebitUserMutationError = ErrorType<unknown>
+    export type DebitUserMutationVariables = {id: string;data: BodyType<AdminWalletActionInput>}
+
+    export const useDebitUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debitUser>>, TError,DebitUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof debitUser>>,
+        TError,
+        DebitUserMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDebitUserMutationOptions(options));
+    }
+
+export const getBanUserUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/ban`
+}
+
+export const banUser = async (id: string,
+    banUserInput: BanUserInput, options?: Parameters<typeof customFetch>[1]): Promise<UserActionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UserActionResponse>(getBanUserUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(banUserInput)
+  }
+);}
+
+
+
+
+
+export const getBanUserMutationKey = () => ['banUser'] as const;
+
+export const getBanUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banUser>>, TError,BanUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof banUser>>, TError,BanUserMutationVariables, TContext> => {
+
+const mutationKey = getBanUserMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof banUser>>, BanUserMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  banUser(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BanUserMutationResult = NonNullable<Awaited<ReturnType<typeof banUser>>>
+    export type BanUserMutationBody = BodyType<BanUserInput>
+    export type BanUserMutationError = ErrorType<unknown>
+    export type BanUserMutationVariables = {id: string;data: BodyType<BanUserInput>}
+
+    export const useBanUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof banUser>>, TError,BanUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof banUser>>,
+        TError,
+        BanUserMutationVariables,
+        TContext
+      > => {
+      return useMutation(getBanUserMutationOptions(options));
+    }
+
+export const getDeleteUserUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}`
+}
+
+export const deleteUser = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getDeleteUserUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteUserMutationKey = () => ['deleteUser'] as const;
+
+export const getDeleteUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError,DeleteUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError,DeleteUserMutationVariables, TContext> => {
+
+const mutationKey = getDeleteUserMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteUser>>, DeleteUserMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteUser(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteUserMutationResult = NonNullable<Awaited<ReturnType<typeof deleteUser>>>
+
+    export type DeleteUserMutationError = ErrorType<unknown>
+    export type DeleteUserMutationVariables = {id: string}
+
+    export const useDeleteUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteUser>>, TError,DeleteUserMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteUser>>,
+        TError,
+        DeleteUserMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteUserMutationOptions(options));
+    }
 
 export const getGetAdminPaymentsUrl = () => {
 

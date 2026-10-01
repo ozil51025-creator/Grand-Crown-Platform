@@ -252,6 +252,76 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/User"
+  /admin/users/{id}/credit:
+    post:
+      operationId: creditUser
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminWalletActionInput"
+      responses:
+        "200":
+          description: User credited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserActionResponse"
+  /admin/users/{id}/debit:
+    post:
+      operationId: debitUser
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminWalletActionInput"
+      responses:
+        "200":
+          description: User debited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserActionResponse"
+  /admin/users/{id}/ban:
+    put:
+      operationId: banUser
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BanUserInput"
+      responses:
+        "200":
+          description: User ban status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserActionResponse"
+  /admin/users/{id}:
+    delete:
+      operationId: deleteUser
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
   /admin/payments:
     get:
       operationId: getAdminPayments
@@ -488,7 +558,8 @@ components:
         totalEarned: { type: number }
         createdAt: { type: string }
         lastCheckin: { type: ["string", "null"] }
-      required: [id, phone, referralCode, wallet, totalEarned, createdAt]
+        banned: { type: boolean }
+      required: [id, phone, referralCode, wallet, totalEarned, createdAt, banned]
     RegisterInput:
       type: object
       properties:
@@ -525,6 +596,23 @@ components:
       properties:
         ok: { type: boolean }
       required: [ok]
+    AdminWalletActionInput:
+      type: object
+      properties:
+        amount: { type: number, minimum: 1 }
+        note: { type: string, maxLength: 160 }
+      required: [amount]
+    BanUserInput:
+      type: object
+      properties:
+        banned: { type: boolean }
+      required: [banned]
+    UserActionResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        user: { $ref: "#/components/schemas/User" }
+      required: [ok, user]
     Purchase:
       type: object
       properties:
