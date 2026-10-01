@@ -566,7 +566,7 @@
   position: relative;
   display: grid;
   width: min(100%, 760px);
-  height: min(450px, calc(100dvh - 52px));
+  height: min(540px, calc(100dvh - 52px));
   min-height: 400px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   overflow: hidden;
@@ -591,7 +591,7 @@
 }
 .gc-auth-form-top {
   position: absolute;
-  top: 28px;
+  top: 8px;
   right: clamp(24px, 4.2vw, 54px);
   left: clamp(24px, 4.2vw, 54px);
   display: flex;
@@ -791,8 +791,8 @@
   box-shadow: 0 0 10px rgba(39, 246, 231, .62);
   pointer-events: none;
 }
-.gc-auth-diagonal-line.is-login { left: 57%; transform: rotate(34deg); }
-.gc-auth-diagonal-line.is-register { left: 43%; transform: rotate(-34deg); }
+.gc-auth-diagonal-line.is-login { left: 68%; transform: rotate(34deg); }
+.gc-auth-diagonal-line.is-register { left: 32%; transform: rotate(-34deg); }
 .gc-auth-brand-logo { position: absolute; top: 19px; right: 20px; left: 20px; }
 .gc-auth-brand-logo > div > div:last-child > div:first-child { color: #f7ffff; font-size: 16px; }
 .gc-auth-brand-logo > div > div:last-child > div:last-child { color: rgba(241, 255, 252, .76); }
