@@ -891,6 +891,7 @@
 }
 @media (min-width: 761px) {
   .gc-auth-form-panel { background: transparent; }
+  .gc-auth-mode-register .gc-auth-frame { height: min(620px, calc(100dvh - 52px)); }
   .gc-auth-mode-login .gc-auth-brand { grid-column: 2; }
   .gc-auth-mode-login .gc-auth-form-panel { grid-column: 1; }
   .gc-auth-mode-register .gc-auth-brand { grid-column: 1; }
