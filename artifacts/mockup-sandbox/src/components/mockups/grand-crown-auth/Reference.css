@@ -1,0 +1,378 @@
+.gc-auth-reference-wrap {
+  min-height: 100dvh;
+  background: #041020;
+}
+.gc-auth-reference-wrap .gc-auth-shell {
+  --gc-ink: #030c19;
+  --gc-panel: rgba(3, 13, 27, .98);
+  --gc-teal: #28ddd4;
+  --gc-muted: #a6ced1;
+  min-height: 100dvh;
+  padding: 28px clamp(14px, 4vw, 52px);
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(0, 124, 152, .12), transparent 56%),
+    linear-gradient(135deg, #030917 0%, #061629 52%, #030b18 100%);
+}
+.gc-auth-reference-wrap .gc-auth-shell::before {
+  opacity: .15;
+  background-size: 46px 46px;
+}
+.gc-auth-reference-wrap .gc-auth-grid-bg { display: none; }
+.gc-auth-reference-wrap .gc-auth-frame {
+  width: min(100%, 940px);
+  height: min(420px, calc(100dvh - 80px));
+  min-height: 360px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border: 1px solid rgba(70, 247, 239, .9);
+  border-radius: 3px;
+  background: #03101f;
+  box-shadow:
+    0 0 0 1px rgba(34, 220, 218, .3),
+    0 0 24px rgba(30, 235, 226, .64),
+    0 0 76px rgba(0, 185, 207, .24),
+    0 35px 90px rgba(0, 0, 0, .58);
+}
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-frame {
+  height: min(460px, calc(100dvh - 80px));
+}
+.gc-auth-reference-wrap .gc-auth-form-panel {
+  z-index: 2;
+  grid-row: 1;
+  min-width: 0;
+  padding: 42px clamp(24px, 4vw, 52px);
+  background: transparent;
+}
+.gc-auth-reference-wrap .gc-auth-form-top {
+  top: 17px;
+  right: 18px;
+  left: 18px;
+  justify-content: flex-end;
+}
+.gc-auth-reference-wrap .gc-auth-small-logo,
+.gc-auth-reference-wrap .gc-auth-brand-logo {
+  display: none;
+}
+.gc-auth-reference-wrap .gc-auth-admin {
+  min-height: 28px;
+  border-color: rgba(151, 203, 207, .24);
+  border-radius: 3px;
+  padding: 0 8px;
+  color: rgba(199, 225, 227, .7);
+  background: rgba(2, 14, 27, .25);
+  font-size: 8px;
+}
+.gc-auth-reference-wrap .gc-auth-admin:hover {
+  border-color: rgba(64, 240, 231, .65);
+  color: #eaffff;
+  background: rgba(46, 215, 209, .08);
+}
+.gc-auth-reference-wrap .gc-auth-card {
+  width: min(100%, 328px);
+}
+.gc-auth-reference-wrap .gc-auth-heading {
+  min-height: auto;
+  margin-bottom: 12px;
+}
+.gc-auth-reference-wrap .gc-auth-form-eyebrow,
+.gc-auth-reference-wrap .gc-auth-heading p {
+  display: none;
+}
+.gc-auth-reference-wrap .gc-auth-heading h2 {
+  font-size: clamp(26px, 2.7vw, 32px);
+  letter-spacing: -.035em;
+}
+.gc-auth-reference-wrap .gc-auth-fields form {
+  gap: 10px;
+  margin: 0;
+}
+.gc-auth-reference-wrap .gc-auth-fields form > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0;
+}
+.gc-auth-reference-wrap .gc-auth-fields form label {
+  display: block;
+  position: relative;
+}
+.gc-auth-reference-wrap .gc-auth-ref-field > span {
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(184, 218, 220, .88);
+  font: 500 10px/1.25 var(--app-font-sans);
+  letter-spacing: .025em;
+  text-transform: none;
+}
+.gc-auth-reference-wrap .gc-auth-ref-input {
+  position: relative;
+}
+.gc-auth-reference-wrap .gc-auth-fields form input {
+  width: 100%;
+  height: 34px;
+  border: 0;
+  border-bottom: 1px solid rgba(169, 222, 225, .7);
+  border-radius: 0;
+  padding: 0 28px 0 0;
+  color: #f4ffff;
+  background: transparent;
+  font-size: 12px;
+  box-shadow: none;
+}
+.gc-auth-reference-wrap .gc-auth-fields form input::placeholder {
+  color: rgba(180, 203, 207, .55);
+}
+.gc-auth-reference-wrap .gc-auth-fields form input:focus {
+  border-bottom-color: #5ffff1;
+  background: transparent;
+  box-shadow: 0 2px 0 rgba(68, 244, 230, .45);
+}
+.gc-auth-reference-wrap .gc-auth-ref-input svg {
+  position: absolute;
+  right: 2px;
+  bottom: 9px;
+  color: #57eee5;
+  pointer-events: none;
+}
+.gc-auth-reference-wrap .gc-auth-fields [data-testid="button-submit-auth"] {
+  display: inline-flex;
+  width: min(100%, 250px);
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 5px auto 0;
+  border: 1px solid rgba(127, 255, 246, .82);
+  border-radius: 999px;
+  color: #ecffff;
+  background: linear-gradient(180deg, #45e8df, #00aebd 84%);
+  box-shadow: 0 0 14px rgba(0, 215, 211, .2), inset 0 1px rgba(255, 255, 255, .65);
+  font: 600 12px/1 var(--app-font-sans);
+}
+.gc-auth-reference-wrap .gc-auth-fields [data-testid="button-submit-auth"]:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 20px rgba(0, 231, 223, .4), inset 0 1px rgba(255, 255, 255, .75);
+}
+.gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] {
+  display: block;
+  margin: 10px auto 0;
+  color: rgba(205, 222, 224, .78);
+  font-size: 10px;
+  text-align: center;
+}
+.gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] span {
+  color: #49e7df;
+}
+.gc-auth-reference-wrap .gc-auth-form-note {
+  display: none;
+}
+.gc-auth-reference-wrap .gc-auth-brand {
+  z-index: 3;
+  grid-row: 1;
+  min-width: 0;
+  padding: 34px clamp(22px, 4vw, 48px);
+  background: transparent;
+}
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-form-panel,
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-brand {
+  grid-column: 1;
+}
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-brand,
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-form-panel {
+  grid-column: 2;
+}
+.gc-auth-reference-wrap .gc-auth-brand-cut {
+  z-index: 1;
+  background:
+    linear-gradient(132deg, #087f98 0%, #05d5d2 53%, #13b9c5 100%),
+    repeating-linear-gradient(0deg, transparent 0 33px, rgba(207, 255, 250, .12) 34px, transparent 35px);
+}
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-brand-cut {
+  clip-path: polygon(34% 0, 100% 0, 100% 100%, 80% 100%);
+}
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-brand-cut {
+  clip-path: polygon(0 0, 67% 0, 20% 100%, 0 100%);
+}
+.gc-auth-reference-wrap .gc-auth-diagonal-line {
+  z-index: 4;
+  top: -16%;
+  bottom: -16%;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(186, 255, 249, .65) 20%, #ffffff 50%, rgba(186, 255, 249, .7) 80%, transparent);
+  box-shadow: 0 0 10px rgba(100, 255, 243, .78);
+}
+.gc-auth-reference-wrap .gc-auth-diagonal-line.is-login {
+  left: 57%;
+  transform: rotate(-46deg);
+}
+.gc-auth-reference-wrap .gc-auth-diagonal-line.is-register {
+  left: 43%;
+  transform: rotate(46deg);
+}
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-editorial,
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-kicker {
+  text-align: right;
+  justify-content: flex-end;
+}
+.gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-editorial {
+  text-align: left;
+}
+.gc-auth-reference-wrap .gc-auth-brand-title {
+  margin-top: 12px;
+  font-size: clamp(26px, 3.1vw, 38px);
+  line-height: 1.06;
+}
+.gc-auth-reference-wrap .gc-auth-brand-copy {
+  max-width: 270px;
+  margin-top: 10px;
+  color: rgba(239, 255, 254, .9);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gc-auth-reference-wrap .gc-auth-mode-login .gc-auth-brand-copy {
+  margin-left: auto;
+}
+.gc-auth-reference-wrap .gc-auth-brand-mark,
+.gc-auth-reference-wrap .gc-auth-brand-foot,
+.gc-auth-reference-wrap .gc-auth-bottom-mark {
+  display: none;
+}
+.gc-auth-preview-admin {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  color: white;
+  background: rgba(0, 7, 15, .86);
+  text-align: center;
+}
+.gc-auth-preview-admin button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  color: white;
+}
+@media (max-width: 760px) {
+  .gc-auth-reference-wrap .gc-auth-shell {
+    display: grid;
+    min-height: 100dvh;
+    padding: 52px 10px 28px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .gc-auth-reference-wrap .gc-auth-frame,
+  .gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-frame {
+    display: grid;
+    width: 100%;
+    height: min(390px, calc(100dvh - 100px));
+    min-height: 340px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex-direction: initial;
+  }
+  .gc-auth-reference-wrap .gc-auth-mode-register .gc-auth-frame {
+    height: min(430px, calc(100dvh - 100px));
+    min-height: 370px;
+  }
+  .gc-auth-reference-wrap .gc-auth-form-panel {
+    order: initial;
+    min-height: 0;
+    padding: 48px 12px 12px;
+  }
+  .gc-auth-reference-wrap .gc-auth-form-top {
+    top: 8px;
+    right: 9px;
+    left: auto;
+  }
+  .gc-auth-reference-wrap .gc-auth-admin {
+    min-height: 24px;
+    gap: 4px;
+    padding: 0 6px;
+    font-size: 7px;
+  }
+  .gc-auth-reference-wrap .gc-auth-card {
+    width: 100%;
+    margin: 0;
+  }
+  .gc-auth-reference-wrap .gc-auth-heading {
+    margin-bottom: 8px;
+  }
+  .gc-auth-reference-wrap .gc-auth-heading h2 {
+    font-size: clamp(19px, 5.5vw, 24px);
+  }
+  .gc-auth-reference-wrap .gc-auth-fields form {
+    gap: 7px;
+  }
+  .gc-auth-reference-wrap .gc-auth-ref-field > span {
+    margin-bottom: 1px;
+    font-size: 8px;
+  }
+  .gc-auth-reference-wrap .gc-auth-fields form input {
+    height: 29px;
+    padding-right: 22px;
+    font-size: 10px;
+  }
+  .gc-auth-reference-wrap .gc-auth-ref-input svg {
+    bottom: 7px;
+    width: 12px;
+    height: 12px;
+  }
+  .gc-auth-reference-wrap .gc-auth-fields [data-testid="button-submit-auth"] {
+    min-height: 34px;
+    margin-top: 3px;
+    font-size: 10px;
+  }
+  .gc-auth-reference-wrap .gc-auth-card > button[data-testid="button-toggle-auth-mode"] {
+    margin-top: 7px;
+    font-size: 8px;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand {
+    order: initial;
+    min-height: 0;
+    padding: 18px 12px;
+  }
+  .gc-auth-reference-wrap .gc-auth-editorial {
+    max-width: 100%;
+  }
+  .gc-auth-reference-wrap .gc-auth-kicker {
+    gap: 5px;
+    font-size: 7px;
+    letter-spacing: .12em;
+  }
+  .gc-auth-reference-wrap .gc-auth-kicker-line {
+    width: 12px;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand-title {
+    margin-top: 9px;
+    font-size: clamp(18px, 5.1vw, 24px);
+    overflow-wrap: anywhere;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand-copy {
+    margin-top: 8px;
+    font-size: 9px;
+    line-height: 1.45;
+  }
+  .gc-auth-reference-wrap .gc-auth-diagonal-line {
+    top: -8%;
+    bottom: -8%;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand-cut {
+    top: 0;
+    bottom: 0;
+    height: auto;
+  }
+}
+@media (max-width: 380px) {
+  .gc-auth-reference-wrap .gc-auth-shell {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+  .gc-auth-reference-wrap .gc-auth-form-panel {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .gc-auth-reference-wrap .gc-auth-brand-copy {
+    font-size: 8px;
+  }
+}

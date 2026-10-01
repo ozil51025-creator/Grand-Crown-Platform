@@ -84,8 +84,11 @@ if (!bundle) {
       cookie: response.headers.get("set-cookie")?.split(";")[0],
     };
   }
-  async function register(phone = "0700000001", password = "initial-password") {
-    const result = await request("/auth/register", { method: "POST", body: { phone, password } });
+  async function register(phone = "0700000001", password = "initial-password", referralCode) {
+    const result = await request("/auth/register", {
+      method: "POST",
+      body: { phone, password, ...(referralCode ? { referralCode } : {}) },
+    });
     assert.equal(result.status, 201);
     assert.ok(result.cookie);
     return { cookie: result.cookie, user: result.body.user, phone };
@@ -135,6 +138,21 @@ if (!bundle) {
     server.close();
     server.closeAllConnections();
     await once(server, "close");
+  });
+
+  test("registration automatically creates unique referral codes and accepts a member referral", async () => {
+    const first = await register();
+    const second = await register("0700000002", "initial-password", first.user.referralCode);
+
+    assert.match(first.user.referralCode, /^[A-F0-9]{8}$/);
+    assert.match(second.user.referralCode, /^[A-F0-9]{8}$/);
+    assert.notEqual(first.user.referralCode, second.user.referralCode);
+
+    const storedUsers = readStore().users;
+    assert.equal(storedUsers.find((user) => user.id === first.user.id)?.referralCode, first.user.referralCode);
+    const storedSecond = storedUsers.find((user) => user.id === second.user.id);
+    assert.equal(storedSecond?.referralCode, second.user.referralCode);
+    assert.equal(storedSecond?.referredBy, first.user.id);
   });
 
   test("account and admin options require their respective authentication", async () => {

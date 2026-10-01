@@ -423,21 +423,34 @@ registerAccountRoutes(router, {
 router.get("/settings", (_req, res) => res.json(readData().settings));
 router.get("/products", (_req, res) => res.json(readData().products));
 
+function generateReferralCode(users: User[]): string | undefined {
+  const existingCodes = new Set(users.map((user) => user.referralCode.toUpperCase()));
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const code = crypto.randomBytes(4).toString("hex").toUpperCase();
+    if (!existingCodes.has(code)) return code;
+  }
+  return undefined;
+}
+
 router.post("/auth/register", (req, res) => {
   const data = readData();
   const phone = bodyString(req, "phone");
   const password = bodyPassword(req);
-  const referralCode = bodyString(req, "referralCode").toUpperCase();
+  const sponsorCode = bodyString(req, "referralCode").toUpperCase();
   if (!/^\+?[0-9]{7,15}$/.test(phone) || password.length < 8 || password.length > 128) {
     return res.status(400).json({ error: "Use a valid phone number and a password of 8–128 characters" });
   }
   if (data.users.some((user) => user.phone === phone)) {
     return res.status(409).json({ error: "An account with that phone already exists" });
   }
-  const parent = referralCode
-    ? data.users.find((user) => user.referralCode === referralCode)
+  const parent = sponsorCode
+    ? data.users.find((user) => user.referralCode === sponsorCode)
     : undefined;
-  if (referralCode && !parent) return res.status(400).json({ error: "Invalid referral code" });
+  if (sponsorCode && !parent) return res.status(400).json({ error: "Invalid referral code" });
+  const memberReferralCode = generateReferralCode(data.users);
+  if (!memberReferralCode) {
+    return res.status(503).json({ error: "Unable to assign a referral code. Please try again." });
+  }
   const passwordParts = hashPassword(password);
   const user: User = {
     id: id("USR"),
@@ -445,7 +458,7 @@ router.post("/auth/register", (req, res) => {
     passwordHash: passwordParts.hash,
     passwordSalt: passwordParts.salt,
     passwordFormat: "raw",
-    referralCode: crypto.randomBytes(4).toString("hex").toUpperCase(),
+    referralCode: memberReferralCode,
     referredBy: parent?.id ?? null,
     wallet: 2100,
     totalEarned: 2100,
