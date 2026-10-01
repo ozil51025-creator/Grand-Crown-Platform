@@ -60,7 +60,6 @@ export function AuthLayout({
   toggle: ReactNode;
   admin: ReactNode;
 }) {
-  const reduce = useReducedMotion();
   const login = mode === 'login';
 
   const formPanel = (
@@ -145,9 +144,6 @@ export function AuthLayout({
         GRAND CROWN · HOTEL &amp; SUITES
       </div>
       {admin}
-      <div className="sr-only" aria-live="polite">
-        {reduce ? 'Reduced motion is enabled.' : ''}
-      </div>
     </main>
   );
 }

@@ -770,6 +770,59 @@
   background-size: 34px 34px;
   mask-image: linear-gradient(120deg, #000, transparent 82%);
 }
+.gc-auth-brand-cut {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(145deg, rgba(3, 117, 141, .97), rgba(0, 222, 207, .95) 53%, rgba(0, 157, 178, .98)),
+    repeating-linear-gradient(0deg, transparent 0 33px, rgba(207, 255, 250, .12) 34px, transparent 35px);
+  pointer-events: none;
+}
+.gc-auth-mode-login .gc-auth-brand-cut { clip-path: polygon(34% 0, 100% 0, 100% 100%, 80% 100%); }
+.gc-auth-mode-register .gc-auth-brand-cut { clip-path: polygon(0 0, 67% 0, 20% 100%, 0 100%); }
+.gc-auth-diagonal-line {
+  position: absolute;
+  z-index: 4;
+  top: -16%;
+  bottom: -16%;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(109, 255, 246, .7) 20%, #9ffff4 50%, rgba(109, 255, 246, .7) 80%, transparent);
+  box-shadow: 0 0 10px rgba(39, 246, 231, .62);
+  pointer-events: none;
+}
+.gc-auth-diagonal-line.is-login { left: 57%; transform: rotate(34deg); }
+.gc-auth-diagonal-line.is-register { left: 43%; transform: rotate(-34deg); }
+.gc-auth-brand-logo { position: absolute; top: 19px; right: 20px; left: 20px; }
+.gc-auth-brand-logo > div > div:last-child > div:first-child { color: #f7ffff; font-size: 16px; }
+.gc-auth-brand-logo > div > div:last-child > div:last-child { color: rgba(241, 255, 252, .76); }
+.gc-auth-mode-login .gc-auth-brand-logo > div { justify-content: flex-end; }
+.gc-auth-mode-register .gc-auth-brand-logo > div { justify-content: flex-start; }
+.gc-auth-mode-login .gc-auth-editorial { text-align: right; }
+.gc-auth-mode-login .gc-auth-kicker { justify-content: flex-end; }
+.gc-auth-mode-register .gc-auth-editorial { text-align: left; }
+.gc-auth-brand-mark {
+  position: absolute;
+  right: 23px;
+  bottom: 19px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(5, 35, 39, .75);
+  font: 600 8px/1.3 var(--app-font-mono);
+  letter-spacing: .08em;
+}
+.gc-auth-brand-mark svg { color: #123a3c; }
+.gc-auth-mode-login .gc-auth-brand-mark { justify-content: flex-end; }
+.gc-auth-mode-register .gc-auth-brand-mark { right: auto; left: 23px; }
+.gc-auth-mode-toggle button {
+  width: 100%;
+  margin-top: 12px !important;
+  color: #aebfc0;
+  font-size: 11px;
+  text-align: center;
+}
+.gc-auth-mode-toggle button span { color: #62e5dc; }
 .gc-auth-brand-content { position: relative; z-index: 1; }
 .gc-auth-brand-logo > div > div:first-child {
   border: 1px solid rgba(220, 191, 115, .48);
@@ -842,7 +895,7 @@
   .gc-auth-mode-register .gc-auth-brand { grid-column: 1; }
   .gc-auth-mode-register .gc-auth-form-panel { grid-column: 2; }
 }
-@media (max-width: 860px) {
+@media (max-width: 760px) {
   .gc-auth-shell { display: block; min-height: 100dvh; padding: 10px 10px 36px; overflow-x: hidden; overflow-y: auto; }
   .gc-auth-shell::before { background-size: 34px 34px; }
   .gc-auth-grid-bg { top: 8%; width: 96vw; height: 54vh; }
