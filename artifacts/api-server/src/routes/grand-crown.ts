@@ -23,6 +23,7 @@ export type User = {
   referralCode: string;
   referredBy: string | null;
   wallet: number;
+  depositBalance: number;
   totalEarned: number;
   createdAt: string;
   lastCheckin: string | null;
@@ -46,7 +47,7 @@ type AdminSession = {
 
 type Purchase = {
   id: string;
-  paymentId: string;
+  paymentId?: string;
   userId: string;
   productId: string;
   productName: string;
@@ -59,8 +60,6 @@ type Purchase = {
 type Payment = {
   id: string;
   userId: string;
-  productId: string;
-  productName: string;
   amount: number;
   method: string;
   payerPhone: string;
@@ -233,7 +232,11 @@ function readData(): Data {
       settings: { ...defaultSettings, ...(raw.settings ?? {}) },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
       users: Array.isArray(raw.users)
-        ? raw.users.map((user) => ({ ...user, banned: Boolean(user.banned) }))
+        ? raw.users.map((user) => ({
+            ...user,
+            depositBalance: Number.isFinite(user.depositBalance) ? user.depositBalance : 0,
+            banned: Boolean(user.banned),
+          }))
         : [],
       adminAccounts: Array.isArray(raw.adminAccounts) ? raw.adminAccounts : [],
       purchases: Array.isArray(raw.purchases) ? raw.purchases : [],
@@ -374,6 +377,7 @@ function publicUser(user: User) {
     phone: user.phone,
     referralCode: user.referralCode,
     wallet: user.wallet,
+    depositBalance: user.depositBalance,
     totalEarned: user.totalEarned,
     createdAt: user.createdAt,
     lastCheckin: user.lastCheckin,
@@ -654,8 +658,8 @@ function createPesaJetCollection(payment: Payment, provider: "mtn" | "airtel") {
       phoneNumber,
       provider,
       reference: payment.transactionId,
-      description: `Grand Crown product purchase: ${payment.productName}`,
-      metadata: { paymentId: payment.id, productId: payment.productId },
+      description: "Grand Crown account deposit",
+      metadata: { paymentId: payment.id },
     }),
   });
 }
@@ -683,27 +687,13 @@ function applyVerifiedProviderTransaction(
 
   const providerStatus = transaction.status.toUpperCase();
   if (providerStatus === "COMPLETED") {
+    const user = data.users.find((item) => item.id === payment.userId);
+    if (!user) throw new PesaJetRequestError("Payment account no longer exists");
     payment.status = "completed";
     payment.settledAt = now();
-    const purchase: Purchase = {
-      id: id("PUR"),
-      paymentId: payment.id,
-      userId: payment.userId,
-      productId: payment.productId,
-      productName: payment.productName,
-      amount: payment.amount,
-      status: "active",
-      purchasedAt: payment.settledAt,
-      earningsCredited: 0,
-    };
-    data.purchases.push(purchase);
-    addTransaction(data, payment.userId, "purchase", payment.amount, {
-      paymentId: payment.id,
-      purchaseId: purchase.id,
-    });
-    const buyer = data.users.find((user) => user.id === payment.userId);
-    if (buyer) applyReferralCommissions(data, buyer, purchase);
-    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_completed", createdAt: payment.settledAt });
+    user.depositBalance += payment.amount;
+    addTransaction(data, payment.userId, "deposit_credit", payment.amount, { paymentId: payment.id });
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_completed", createdAt: payment.settledAt });
   } else if (providerStatus === "FAILED") {
     payment.status = "failed";
     data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_failed", createdAt: now() });
@@ -811,6 +801,7 @@ router.post("/auth/register", (req, res) => {
     referralCode: memberReferralCode,
     referredBy: parent?.id ?? null,
     wallet: data.settings.welcomeBonus,
+    depositBalance: 0,
     totalEarned: data.settings.welcomeBonus,
     createdAt: now(),
     lastCheckin: null,
