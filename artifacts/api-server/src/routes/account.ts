@@ -26,13 +26,13 @@ export type StoredGiftCode = {
 };
 
 type Dependencies = {
-  readData: () => Data;
-  writeData: (data: Data) => void;
+  readData: () => Promise<Data>;
+  writeData: (data: Data) => Promise<void>;
   requireUser: (req: Request, res: Response, data: Data) => User | undefined;
-  requireAdmin: (req: Request, res: Response) => boolean;
+  requireAdmin: (req: Request, res: Response) => Promise<boolean>;
   hashPassword: (password: string) => { salt: string; hash: string };
   verifyPassword: (password: string, user: User) => boolean;
-  revokeOtherSessions: (req: Request, userId: string) => void;
+  revokeOtherSessions: (data: Data, req: Request, userId: string) => void;
   addTransaction: (data: Data, userId: string, type: string, amount: number) => void;
   id: (prefix: string) => string;
   now: () => string;
@@ -84,8 +84,8 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
     return false;
   }
 
-  router.get("/account/transactions", (req, res) => {
-    const data = deps.readData();
+  router.get("/account/transactions", async (req, res) => {
+    const data = await deps.readData();
     const user = deps.requireUser(req, res, data);
     if (!user) return;
     const transactions = data.transactions
@@ -97,8 +97,8 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
     res.json(transactions);
   });
 
-  router.post("/account/password", (req, res) => {
-    const data = deps.readData();
+  router.post("/account/password", async (req, res) => {
+    const data = await deps.readData();
     const user = deps.requireUser(req, res, data);
     if (!user) return;
     if (rateLimited(user.id, "password", 5)) {
@@ -123,15 +123,14 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
     user.passwordSalt = password.salt;
     user.passwordHash = password.hash;
     user.passwordFormat = "raw";
-    deps.writeData(data);
-    deps.revokeOtherSessions(req, user.id);
+    deps.revokeOtherSessions(data, req, user.id);
+    await deps.writeData(data);
     res.json(ChangeAccountPasswordResponse.parse({ ok: true }));
   });
 
-  router.post("/account/gift-codes/redeem", (req, res) => {
-    // All validation, crediting and persistence is synchronous. There must be no
-    // await between this read and write: duplicate requests cannot interleave.
-    const data = deps.readData();
+  router.post("/account/gift-codes/redeem", async (req, res) => {
+    // The API's request lock covers this complete read/validate/write sequence.
+    const data = await deps.readData();
     const user = deps.requireUser(req, res, data);
     if (!user) return;
     if (rateLimited(user.id, "gift", 20)) {
@@ -176,18 +175,18 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
     user.totalEarned += gift.amount;
     deps.addTransaction(data, user.id, "gift_code", gift.amount);
     data.activity.push({ id: deps.id("ACT"), userId: user.id, type: "gift_code", createdAt: deps.now() });
-    deps.writeData(data);
+    await deps.writeData(data);
     res.json(RedeemGiftCodeResponse.parse({ ok: true, amount: gift.amount, wallet: user.wallet }));
   });
 
-  router.get("/admin/gift-codes", (req, res) => {
-    if (!deps.requireAdmin(req, res)) return;
-    const gifts = deps.readData().giftCodes.slice().reverse().map(publicGiftCode);
+  router.get("/admin/gift-codes", async (req, res) => {
+    if (!(await deps.requireAdmin(req, res))) return;
+    const gifts = (await deps.readData()).giftCodes.slice().reverse().map(publicGiftCode);
     res.json(GetAdminGiftCodesResponse.parse(gifts));
   });
 
-  router.post("/admin/gift-codes", (req, res) => {
-    if (!deps.requireAdmin(req, res)) return;
+  router.post("/admin/gift-codes", async (req, res) => {
+    if (!(await deps.requireAdmin(req, res))) return;
     const body = normalizeCodeBody(req.body);
     const expiresAt = body && typeof body === "object" ? (body as Record<string, unknown>).expiresAt : undefined;
     if (expiresAt !== undefined && expiresAt !== null && !validFutureIso(expiresAt)) {
@@ -200,7 +199,7 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
       res.status(400).json({ error: "Enter a valid code, integer amount (1–100000000) and redemption limit (1–100000)." });
       return;
     }
-    const data = deps.readData();
+    const data = await deps.readData();
     if (data.giftCodes.some((gift) => gift.code.toUpperCase() === parsed.data.code)) {
       res.status(409).json({ error: "A gift code with that code already exists" });
       return;
@@ -216,25 +215,25 @@ export function registerAccountRoutes(router: IRouter, deps: Dependencies) {
       redeemedUserIds: [],
     };
     data.giftCodes.push(gift);
-    deps.writeData(data);
+    await deps.writeData(data);
     res.status(201).json(CreateAdminGiftCodeResponse.parse(publicGiftCode(gift)));
   });
 
-  router.patch("/admin/gift-codes/:id", (req, res) => {
-    if (!deps.requireAdmin(req, res)) return;
+  router.patch("/admin/gift-codes/:id", async (req, res) => {
+    if (!(await deps.requireAdmin(req, res))) return;
     const parsed = UpdateAdminGiftCodeBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Enabled must be true or false" });
       return;
     }
-    const data = deps.readData();
+    const data = await deps.readData();
     const gift = data.giftCodes.find((item) => item.id === req.params.id);
     if (!gift) {
       res.status(404).json({ error: "Gift code not found" });
       return;
     }
     gift.enabled = parsed.data.enabled;
-    deps.writeData(data);
+    await deps.writeData(data);
     res.json(UpdateAdminGiftCodeResponse.parse(publicGiftCode(gift)));
   });
 }
