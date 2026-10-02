@@ -230,7 +230,7 @@ function WalletSheet({ user, currency, withdrawals, loading, error, canWithdraw,
         <button data-testid="button-wallet-deposit" onClick={onDeposit} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 text-sm font-semibold hover:border-accent"><ArrowDownToLine className="size-4" />Deposit</button>
         <button data-testid="button-wallet-withdraw" onClick={onWithdraw} disabled={canWithdraw === false} className={goldBtn}><ArrowUpToLine className="size-4" />Withdraw</button>
       </div>
-      <p className="mt-2 text-[11px] text-white/50">Minimum withdrawal {money(7000, currency)}. Requests are reviewed and paid manually.</p>
+      <p className="mt-2 text-[11px] text-white/50">Minimum withdrawal {money(settings?.minWithdrawal ?? 3000, currency)} · {settings?.withdrawalFeePercent ?? 15}% fee on every withdrawal.</p>
       <h3 className="mt-6 text-sm font-semibold">Withdrawal history</h3>
       <div className="mt-3 space-y-2">
         {loading ? [0, 1].map(i => <div key={i} className="h-14 animate-pulse rounded-xl bg-white/10" />)
