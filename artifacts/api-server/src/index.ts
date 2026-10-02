@@ -1,6 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { ensureDataStoreReady } from "./routes/grand-crown";
+import {
+  ensureDataStoreReady,
+  runGrandCrownEarningsSweep,
+  startGrandCrownEarningsScheduler,
+} from "./routes/grand-crown";
 
 const rawPort = process.env["PORT"];
 
@@ -19,6 +23,10 @@ if (Number.isNaN(port) || port <= 0) {
 async function start() {
   try {
     await ensureDataStoreReady();
+    await runGrandCrownEarningsSweep();
+    startGrandCrownEarningsScheduler((err) => {
+      logger.error({ err }, "Scheduled earnings sweep failed");
+    });
     app.listen(port, (err) => {
       if (err) {
         logger.error({ err }, "Error listening on port");

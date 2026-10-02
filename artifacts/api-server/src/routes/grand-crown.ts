@@ -266,6 +266,9 @@ function normalizeData(raw: Partial<Data>): Data {
     settings: {
       ...defaultSettings,
       ...savedSettings,
+      cycleDays: 1,
+      withdrawalMultiple: 0,
+      requirePlanBeforeWithdraw: true,
       ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
       ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
       ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
@@ -588,7 +591,7 @@ function addTransaction(
 
 async function processEarnings(data: Data) {
   let changed = false;
-  const cycleMs = dayMs * Math.max(1, data.settings.cycleDays || 1);
+  const cycleMs = dayMs;
   for (const purchase of data.purchases) {
     const product = data.products.find((item) => item.id === purchase.productId);
     const user = data.users.find((item) => item.id === purchase.userId);
@@ -672,43 +675,71 @@ async function acquireLocalRequestTurn() {
   return release;
 }
 
-router.use(async (_req, res, next) => {
+async function withExclusiveStateLock<T>(action: () => Promise<T>): Promise<T> {
   const releaseLocal = await acquireLocalRequestTurn();
-  if (fileStorageEnabled) {
-    res.once("finish", releaseLocal);
-    res.once("close", releaseLocal);
-    return next();
-  }
   let client:
     | { query: (text: string) => Promise<unknown>; release: (destroy?: boolean) => void }
     | undefined;
-  try {
-    const { pool } = await getDatabase();
-    client = await pool.connect();
-    await client.query("SELECT pg_advisory_lock(381049882211337::bigint)");
-  } catch {
-    client?.release(true);
-    releaseLocal();
-    return res.status(503).json({ error: "Persistent storage is temporarily unavailable." });
+  if (!fileStorageEnabled) {
+    try {
+      const { pool } = await getDatabase();
+      client = await pool.connect();
+      await client.query("SELECT pg_advisory_lock(381049882211337::bigint)");
+    } catch (error) {
+      client?.release(true);
+      releaseLocal();
+      throw error;
+    }
   }
-  let released = false;
-  const releaseRequest = () => {
-    if (released) return;
-    released = true;
-    void (async () => {
+  try {
+    return await action();
+  } finally {
+    if (client) {
       try {
         await client!.query("SELECT pg_advisory_unlock(381049882211337::bigint)");
         client!.release();
       } catch {
         client!.release(true);
-      } finally {
-        releaseLocal();
       }
-    })();
-  };
-  res.once("finish", releaseRequest);
-  res.once("close", releaseRequest);
-  return next();
+    }
+    releaseLocal();
+  }
+}
+
+export async function runGrandCrownEarningsSweep() {
+  await withExclusiveStateLock(async () => {
+    const data = await readData();
+    await processEarnings(data);
+  });
+}
+
+export function startGrandCrownEarningsScheduler(
+  onError: (error: unknown) => void,
+  intervalMs = 60_000,
+) {
+  const timer = setInterval(() => {
+    void runGrandCrownEarningsSweep().catch(onError);
+  }, intervalMs);
+  timer.unref();
+  return timer;
+}
+
+router.use(async (req, res, next): Promise<void> => {
+  const responseDone = new Promise<void>((resolve) => {
+    res.once("finish", resolve);
+    res.once("close", resolve);
+  });
+  try {
+    await withExclusiveStateLock(async () => {
+      if (res.destroyed || res.writableEnded) return;
+      next();
+      await responseDone;
+    });
+  } catch {
+    if (!res.headersSent) {
+      res.status(503).json({ error: "Persistent storage is temporarily unavailable." });
+    }
+  }
 });
 
 router.use(async (req, res, next) => {
@@ -1060,18 +1091,15 @@ router.post("/withdrawals", async (req, res) => {
   const amount = bodyNumber(req, "amount");
   const method = bodyString(req, "method");
   const phone = bodyString(req, "phone");
-  if (data.settings.requirePlanBeforeWithdraw && activePurchases(data, user.id).length === 0) {
+  if (activePurchases(data, user.id).length === 0) {
     return res.status(403).json({ error: "Approve at least one product before withdrawing" });
   }
   if (data.withdrawals.some((item) => item.userId === user.id && ["pending", "processing", "sending"].includes(item.status))) {
     return res.status(409).json({ error: "You already have a withdrawal awaiting review" });
   }
   const minimum = data.settings.minWithdrawal;
-  if (!Number.isFinite(amount) || amount < minimum) {
+  if (!Number.isSafeInteger(amount) || amount < minimum) {
     return res.status(400).json({ error: `Minimum withdrawal is ${money(minimum, data.settings.currency)}` });
-  }
-  if (data.settings.withdrawalMultiple > 0 && amount % data.settings.withdrawalMultiple !== 0) {
-    return res.status(400).json({ error: `Withdrawal amount must be a multiple of ${money(data.settings.withdrawalMultiple, data.settings.currency)}` });
   }
   if (amount > user.wallet) return res.status(400).json({ error: "Insufficient wallet balance" });
   if (data.settings.maxWithdrawalsPerUserPerDay > 0) {
@@ -1506,6 +1534,9 @@ router.put("/admin/settings", async (req, res) => {
   data.settings = {
     ...data.settings,
     ...parsed.data,
+    cycleDays: 1,
+    withdrawalMultiple: 0,
+    requirePlanBeforeWithdraw: true,
     openingAt: parsed.data.openingAt?.toISOString() ?? null,
     brand: parsed.data.brand.trim().slice(0, 80),
     allowedDomains: allowedDomains.filter((domain): domain is string => Boolean(domain)),
