@@ -228,8 +228,9 @@ function WalletSheet({ user, settings, currency, withdrawals, loading, error, ca
       <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/15 bg-white/5 p-4"><div><div className="text-xs text-white/60">Referral code</div><div className="mt-1 font-mono text-sm" data-testid="text-wallet-referral">{user.referralCode}</div></div><button data-testid="button-copy-referral-code" onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"><Copy className="size-3.5" />Copy</button></div>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button data-testid="button-wallet-deposit" onClick={onDeposit} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 text-sm font-semibold hover:border-accent"><ArrowDownToLine className="size-4" />Deposit</button>
-        <button data-testid="button-wallet-withdraw" onClick={onWithdraw} disabled={canWithdraw === false} className={goldBtn}><ArrowUpToLine className="size-4" />Withdraw</button>
+        <button data-testid="button-wallet-withdraw" onClick={onWithdraw} disabled={canWithdraw !== true} className={goldBtn}><ArrowUpToLine className="size-4" />{canWithdraw === true ? 'Withdraw' : 'Activate a plan'}</button>
       </div>
+      {canWithdraw === false && <p className="mt-2 text-[11px] text-white/50">Activate at least one product or plan before requesting a withdrawal.</p>}
       <p className="mt-2 text-[11px] text-white/50">Minimum withdrawal {money(settings?.minWithdrawal ?? 3000, currency)} · {settings?.withdrawalFeePercent ?? 15}% fee on every withdrawal.</p>
       <h3 className="mt-6 text-sm font-semibold">Withdrawal history</h3>
       <div className="mt-3 space-y-2">
