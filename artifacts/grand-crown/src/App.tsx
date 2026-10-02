@@ -437,6 +437,7 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const referrals = useGetAdminReferrals();
   const activity = useGetAdminActivity();
   const settings = useGetAdminSettings();
+  const adminAccounts = useGetAdminAdmins();
   const reviewPayment = useReviewPayment();
   const reviewWithdrawal = useReviewWithdrawal();
   const creditUser = useCreditUser();
@@ -446,17 +447,38 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
   const updateSettings = useUpdateAdminSettings();
-  const [modal, setModal] = useState<'product' | 'settings' | 'credit' | 'debit' | null>(null);
+  const createAdmin = useCreateAdminAccount();
+  const deleteAdmin = useDeleteAdminAccount();
+  const [modal, setModal] = useState<'product' | 'credit' | 'debit' | null>(null);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userAmount, setUserAmount] = useState('');
   const [userNote, setUserNote] = useState('');
   const [product, setProduct] = useState({ name: '', price: '', daily: '', total: '', days: '' });
-  const [siteSettings, setSiteSettings] = useState({ brand: '', currency: '', supportHandle: '', telegramUrl: '', airtelNumber: '', mtnNumber: '', payeeName: '', termsText: '' });
+  const [adminForm, setAdminForm] = useState({ username: '', password: '' });
   const { toast } = useToast();
   const approvePayment = (id: string, action: 'approve' | 'reject') => reviewPayment.mutate({ id, data: { action } }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: `Payment ${action}d`, description: 'The deposit queue has been updated.' }); } });
   const approveWithdrawal = (id: string, action: 'approve' | 'reject') => reviewWithdrawal.mutate({ id, data: { action } }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: `Withdrawal ${action}d`, description: 'The withdrawal queue has been updated.' }); } });
   const saveProduct = (event: FormEvent) => { event.preventDefault(); createProduct.mutate({ data: { name: product.name, price: Number(product.price), daily: Number(product.daily), total: Number(product.total), days: Number(product.days) } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); setProduct({ name: '', price: '', daily: '', total: '', days: '' }); toast({ title: 'Product created' }); } }); };
-  const saveSettings = (event: FormEvent) => { event.preventDefault(); updateSettings.mutate({ data: siteSettings }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Settings saved' }); } }); };
+  const saveSettings = (data: SettingsInput) => updateSettings.mutate({ data }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'Settings saved', description: 'Uganda rates, limits, and platform options are now active.' }); } });
+  const saveAdmin = (event: FormEvent) => {
+    event.preventDefault();
+    createAdmin.mutate({ data: adminForm }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        setAdminForm({ username: '', password: '' });
+        toast({ title: 'Administrator added' });
+      },
+    });
+  };
+  const removeAdmin = (admin: any) => {
+    if (!window.confirm(`Remove administrator ${admin.username}? Their active console sessions will be revoked.`)) return;
+    deleteAdmin.mutate({ id: admin.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        toast({ title: 'Administrator removed', description: 'Their active console sessions have been revoked.' });
+      },
+    });
+  };
   const openUserWallet = (user: any, action: 'credit' | 'debit') => { setSelectedUser(user); setUserAmount(''); setUserNote(''); setModal(action); };
   const saveUserWallet = (event: FormEvent) => {
     event.preventDefault();
@@ -489,12 +511,12 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   else if (active === 'referrals') view = <AdminListPage eyebrow="Network health" title="Referrals." copy="The current shape of member-led growth." loading={referrals.isLoading} error={!!referrals.error} empty={!referrals.data}><AdminReferrals referrals={referrals.data} /></AdminListPage>;
   else if (active === 'gift-codes') view = <AdminGiftCodes />;
   else if (active === 'messages') view = <AdminSupportPage settings={settings.data} />;
-  else if (active === 'countries') view = <AdminInfoPage eyebrow="Platform reach" title="Countries." copy="Review the countries currently supported by the platform." title2="Uganda" body="Grand Crown is currently configured for Uganda and UGX mobile-money payments." />;
-  else if (active === 'admins') view = <AdminInfoPage eyebrow="Access control" title="Admins." copy="Review administrator access for this console." title2="Administrator access is active" body="The current administrator session is active. Add separate administrator accounts when multi-admin access is configured." />;
+  else if (active === 'countries') view = <AdminListPage eyebrow="Platform reach" title="Countries." copy="Grand Crown currently supports one market profile." loading={settings.isLoading} error={!!settings.error}><div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-5"><div><div className="font-mono text-[10px] font-bold uppercase tracking-[.16em] text-slate-500">Active market</div><h2 className="mt-2 text-2xl font-extrabold text-slate-900">Uganda</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Currency: {settings.data?.currency || 'UGX'} · Mobile money: MTN and Airtel · Local time: Africa/Kampala</p></div><Button data-testid="button-country-settings" onClick={() => setActive('settings')} className="bg-[#f07a16] text-white hover:bg-[#dc6810]"><Settings2 className="size-4" /> Rates &amp; limits · Uganda</Button></div><div className="mt-6 grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-slate-50 p-4"><div className="text-xs font-semibold text-slate-500">Minimum deposit</div><div className="mt-2 font-mono font-bold text-slate-900">{money(settings.data?.minDeposit, settings.data?.currency)}</div></div><div className="rounded-xl bg-slate-50 p-4"><div className="text-xs font-semibold text-slate-500">Minimum withdrawal</div><div className="mt-2 font-mono font-bold text-slate-900">{money(settings.data?.minWithdrawal, settings.data?.currency)}</div></div><div className="rounded-xl bg-slate-50 p-4"><div className="text-xs font-semibold text-slate-500">Withdrawal fee</div><div className="mt-2 font-mono font-bold text-slate-900">{settings.data?.withdrawalFeePercent ?? 0}%</div></div></div></div></AdminListPage>;
+  else if (active === 'admins') view = <AdminListPage eyebrow="Access control" title="Admins." copy="Manage administrator accounts. Only the owner can add or remove accounts." loading={adminAccounts.isLoading} error={!!adminAccounts.error}><div className="space-y-5"><div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">{(adminAccounts.data?.admins || []).map((admin: any) => <div key={admin.id} data-testid={`row-admin-account-${admin.id}`} className="flex flex-col gap-4 border-b border-slate-100 p-5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-slate-900">{admin.username}</span><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">{admin.role}</span>{admin.isCurrent && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Current session</span>}</div><div className="mt-1 text-xs text-slate-500">Created {admin.createdAt ? shortDate(admin.createdAt) : 'Owner account'} · Last sign-in {admin.lastLoginAt ? shortDate(admin.lastLoginAt) : 'Not recorded'}</div></div>{adminAccounts.data?.canManage && admin.role !== 'Owner' && !admin.isCurrent && <Button data-testid={`button-delete-admin-${admin.id}`} variant="danger" onClick={() => removeAdmin(admin)} disabled={deleteAdmin.isPending}><Trash2 className="size-4" /> Remove</Button>}</div>)}</div>{adminAccounts.data?.canManage && <form onSubmit={saveAdmin} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><h2 className="text-lg font-bold text-slate-900">Add administrator</h2><p className="mt-1 text-sm text-slate-500">Create an account with its own sign-in at /admin.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Username" data-testid="input-new-admin-username" autoComplete="off" minLength={3} maxLength={32} value={adminForm.username} onChange={e => setAdminForm({ ...adminForm, username: e.target.value })} required /><Field label="Temporary password" data-testid="input-new-admin-password" type="password" autoComplete="new-password" minLength={8} maxLength={128} value={adminForm.password} onChange={e => setAdminForm({ ...adminForm, password: e.target.value })} required /></div>{createAdmin.error && <p role="alert" className="mt-3 text-sm text-red-600">Could not add the administrator. Check the username is unique and the password is at least 8 characters.</p>}<Button data-testid="button-create-admin" type="submit" className="mt-5 bg-[#f07a16] text-white hover:bg-[#dc6810]" disabled={createAdmin.isPending}>{createAdmin.isPending ? 'Creating…' : 'Create admin account'}<Plus className="size-4" /></Button></form>}</div></AdminListPage>;
   else if (active === 'activity') view = <AdminListPage eyebrow="Audit trail" title="Activity." copy="Recent actions across the Grand Crown console." loading={activity.isLoading} error={!!activity.error} empty={!activity.data?.length}><AdminActivity activity={activity.data || []} /></AdminListPage>;
-  else if (active === 'settings') view = <AdminListPage eyebrow="Configuration" title="Settings." copy="Control the member-facing payment instructions and brand details." action={<Button data-testid="button-edit-settings" onClick={() => { if (settings.data) setSiteSettings({ ...siteSettings, ...settings.data, termsText: settings.data.termsText || '' }); setModal('settings'); }}><Settings2 className="size-4" /> Edit settings</Button>} loading={settings.isLoading} error={!!settings.error}><SettingsCard settings={settings.data} /></AdminListPage>;
+  else if (active === 'settings') view = <AdminListPage eyebrow="Configuration" title="Settings." copy="Edit every member-facing rate, limit, payment instruction, access control, and announcement." loading={settings.isLoading} error={!!settings.error}>{settings.data && <AdminSettingsEditor settings={settings.data} onSave={saveSettings} pending={updateSettings.isPending} error={!!updateSettings.error} />}</AdminListPage>;
   else view = <AdminOverview dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} onReview={() => setActive('deposits')} />;
-  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{modal === 'settings' && <AdminSettingsModal values={siteSettings} setValues={setSiteSettings} onClose={() => setModal(null)} onSubmit={saveSettings} pending={updateSettings.isPending} error={!!updateSettings.error} />}{(modal === 'credit' || modal === 'debit') && selectedUser && <AdminUserWalletModal action={modal} user={selectedUser} amount={userAmount} note={userNote} setAmount={setUserAmount} setNote={setUserNote} onClose={() => { setModal(null); setSelectedUser(null); }} onSubmit={saveUserWallet} pending={creditUser.isPending || debitUser.isPending} error={!!creditUser.error || !!debitUser.error} />}</>;
+  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{(modal === 'credit' || modal === 'debit') && selectedUser && <AdminUserWalletModal action={modal} user={selectedUser} amount={userAmount} note={userNote} setAmount={setUserAmount} setNote={setUserNote} onClose={() => { setModal(null); setSelectedUser(null); }} onSubmit={saveUserWallet} pending={creditUser.isPending || debitUser.isPending} error={!!creditUser.error || !!debitUser.error} />}</>;
 }
 
 function AdminListPage({ eyebrow, title, copy, action, loading, error, empty, children }: { eyebrow: string; title: string; copy: string; action?: ReactNode; loading: boolean; error: boolean; empty?: boolean; children: ReactNode }) {
@@ -505,8 +527,88 @@ function AdminProductModal({ values, setValues, onClose, onSubmit, pending, erro
   return <Modal title="Create an earning plan" onClose={onClose}><form onSubmit={onSubmit} className="space-y-4"><Field label="Plan name" data-testid="input-product-name" placeholder="e.g. Crown Builder" value={values.name} onChange={e => setValues({ ...values, name: e.target.value })} required /><div className="grid gap-4 sm:grid-cols-2"><Field label="Price" data-testid="input-product-price" type="number" min="1" value={values.price} onChange={e => setValues({ ...values, price: e.target.value })} required /><Field label="Daily earning" data-testid="input-product-daily" type="number" min="0" value={values.daily} onChange={e => setValues({ ...values, daily: e.target.value })} required /><Field label="Total earning" data-testid="input-product-total" type="number" min="0" value={values.total} onChange={e => setValues({ ...values, total: e.target.value })} required /><Field label="Term in days" data-testid="input-product-days" type="number" min="1" value={values.days} onChange={e => setValues({ ...values, days: e.target.value })} required /></div>{error && <p className="text-sm text-destructive">Product could not be created. Confirm each value and try again.</p>}<Button data-testid="button-submit-product" type="submit" className="w-full" disabled={pending}>{pending ? 'Creating…' : 'Create product'}<Plus className="size-4" /></Button></form></Modal>;
 }
 
-function AdminSettingsModal({ values, setValues, onClose, onSubmit, pending, error }: { values: Record<string, string>; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error: boolean }) {
-  return <Modal title="Edit platform settings" onClose={onClose} wide><form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2"><Field label="Brand" data-testid="input-settings-brand" value={values.brand} onChange={e => setValues({ ...values, brand: e.target.value })} /><Field label="Currency" data-testid="input-settings-currency" value={values.currency} onChange={e => setValues({ ...values, currency: e.target.value })} /><Field label="MTN number" data-testid="input-settings-mtn" value={values.mtnNumber} onChange={e => setValues({ ...values, mtnNumber: e.target.value })} /><Field label="Airtel number" data-testid="input-settings-airtel" value={values.airtelNumber} onChange={e => setValues({ ...values, airtelNumber: e.target.value })} /><Field label="Payee name" data-testid="input-settings-payee" value={values.payeeName} onChange={e => setValues({ ...values, payeeName: e.target.value })} /><Field label="Support handle" data-testid="input-settings-support" value={values.supportHandle} onChange={e => setValues({ ...values, supportHandle: e.target.value })} /><Field label="Telegram URL" data-testid="input-settings-telegram" value={values.telegramUrl} onChange={e => setValues({ ...values, telegramUrl: e.target.value })} /><label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Terms &amp; conditions (plain text, shown to members)</span><textarea data-testid="input-settings-terms" maxLength={20000} rows={8} className="w-full rounded-xl border border-input bg-background px-3.5 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20" value={values.termsText || ''} onChange={e => setValues({ ...values, termsText: e.target.value })} placeholder="Leave empty to show members that terms are not yet published." /><span className="block text-right text-[10px] text-muted-foreground">{(values.termsText || '').length}/20000</span></label><div className="sm:col-span-2">{error && <p className="mb-3 text-sm text-destructive">Settings could not be saved.</p>}<Button data-testid="button-submit-settings" type="submit" className="w-full" disabled={pending}>{pending ? 'Saving…' : 'Save settings'}<Check className="size-4" /></Button></div></form></Modal>;
+function AdminSettingsToggle({ title, description, checked, onChange }: { title: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} className="mt-1 size-4 accent-[#f07a16]" />
+    <span><span className="block text-sm font-semibold text-slate-900">{title}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{description}</span></span>
+  </label>;
+}
+
+function AdminSettingsSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div className="mb-5"><h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2><p className="mt-1 text-sm text-slate-500">{description}</p></div>
+    <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+  </section>;
+}
+
+function AdminSettingsEditor({ settings, onSave, pending, error }: { settings: Settings; onSave: (data: SettingsInput) => void; pending: boolean; error: boolean }) {
+  const [values, setValues] = useState<SettingsInput>(() => ({ ...settings, allowedDomains: [...settings.allowedDomains] }));
+  const [domainsText, setDomainsText] = useState(settings.allowedDomains.join('\n'));
+  const [openingAtText, setOpeningAtText] = useState(toUgandaDateTimeInput(settings.openingAt));
+  useEffect(() => {
+    setValues({ ...settings, allowedDomains: [...settings.allowedDomains] });
+    setDomainsText(settings.allowedDomains.join('\n'));
+    setOpeningAtText(toUgandaDateTimeInput(settings.openingAt));
+  }, [settings]);
+  const updateText = (key: 'brand' | 'currency' | 'supportHandle' | 'telegramUrl' | 'airtelNumber' | 'mtnNumber' | 'payeeName', value: string) => setValues(current => ({ ...current, [key]: value }));
+  const updateNumber = (key: 'minDeposit' | 'minWithdrawal' | 'withdrawalMultiple' | 'welcomeBonus' | 'checkinBonus' | 'withdrawalFeePercent' | 'l1CommissionPercent' | 'l2CommissionPercent' | 'l3CommissionPercent' | 'returnMultiple' | 'cycleDays' | 'maxWithdrawalsPerUserPerDay', value: string) => setValues(current => ({ ...current, [key]: value === '' ? 0 : Number(value) }));
+  const updateToggle = (key: 'requirePlanBeforeWithdraw' | 'restrictWithdrawalsToHours' | 'requireReferralCode' | 'maintenanceMode' | 'openingCountdown' | 'announcementEnabled', checked: boolean) => setValues(current => ({ ...current, [key]: checked }));
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    onSave({
+      ...values,
+      allowedDomains: domainsText.split(/[\n,]/).map(domain => domain.trim()).filter(Boolean),
+      openingAt: openingAtText ? fromUgandaDateTimeInput(openingAtText) : null,
+    });
+  };
+  const numberField = (key: Parameters<typeof updateNumber>[0], label: string, min = 0, max?: number, step = 1, hint?: string) => <div className="space-y-1.5"><Field label={label} type="number" min={min} max={max} step={step} value={values[key]} onChange={event => updateNumber(key, event.target.value)} />{hint && <p className="text-xs text-slate-500">{hint}</p>}</div>;
+  const toggle = (key: Parameters<typeof updateToggle>[0], title: string, description: string) => <AdminSettingsToggle title={title} description={description} checked={values[key]} onChange={checked => updateToggle(key, checked)} />;
+  return <form onSubmit={save} className="space-y-5" data-testid="form-admin-settings">
+    <AdminSettingsSection title="Brand and payment details" description="Member-facing identity, support, and manual payment instructions.">
+      <Field label="Brand name" data-testid="input-settings-brand" maxLength={80} value={values.brand} onChange={event => updateText('brand', event.target.value)} required />
+      <Field label="Currency code" data-testid="input-settings-currency" maxLength={8} value={values.currency} onChange={event => updateText('currency', event.target.value.toUpperCase())} required />
+      <Field label="MTN Mobile Money number" data-testid="input-settings-mtn" value={values.mtnNumber} onChange={event => updateText('mtnNumber', event.target.value)} />
+      <Field label="Airtel Money number" data-testid="input-settings-airtel" value={values.airtelNumber} onChange={event => updateText('airtelNumber', event.target.value)} />
+      <Field label="Payee name" data-testid="input-settings-payee" value={values.payeeName} onChange={event => updateText('payeeName', event.target.value)} />
+      <Field label="Support handle" data-testid="input-settings-support" value={values.supportHandle} onChange={event => updateText('supportHandle', event.target.value)} />
+      <Field label="Telegram URL" data-testid="input-settings-telegram" type="url" value={values.telegramUrl} onChange={event => updateText('telegramUrl', event.target.value)} />
+      <label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-600">Terms and conditions</span><textarea data-testid="input-settings-terms" maxLength={20000} rows={6} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#f07a16] focus:ring-2 focus:ring-orange-100" value={values.termsText} onChange={event => setValues(current => ({ ...current, termsText: event.target.value }))} /><span className="block text-right text-[10px] text-slate-500">{values.termsText.length}/20000 characters</span></label>
+    </AdminSettingsSection>
+    <AdminSettingsSection title="Rates &amp; limits · Uganda" description="These values apply to the single Uganda profile and affect member transactions.">
+      {numberField('minDeposit', 'Minimum deposit (UGX)', 0, 100_000_000)}
+      {numberField('minWithdrawal', 'Minimum withdrawal (UGX)', 0, 100_000_000)}
+      {numberField('withdrawalMultiple', 'Withdrawal amount multiple', 0, 100_000_000, 1, '0 disables the multiple requirement.')}
+      {numberField('welcomeBonus', 'Signup bonus (UGX)', 0, 100_000_000)}
+      {numberField('checkinBonus', 'Daily check-in bonus (UGX)', 0, 100_000_000)}
+      {numberField('withdrawalFeePercent', 'Withdrawal fee (%)', 0, 100, 0.1)}
+      {numberField('l1CommissionPercent', 'Referral commission · level 1 (%)', 0, 100, 0.1)}
+      {numberField('l2CommissionPercent', 'Referral commission · level 2 (%)', 0, 100, 0.1)}
+      {numberField('l3CommissionPercent', 'Referral commission · level 3 (%)', 0, 100, 0.1)}
+      {numberField('returnMultiple', 'Maximum plan return multiple', 0, 100, 0.01)}
+      {numberField('cycleDays', 'Earning cycle length (days)', 1, 365)}
+      {numberField('maxWithdrawalsPerUserPerDay', 'Maximum withdrawals per member per day', 0, 1000, 1, '0 means there is no daily withdrawal cap.')}
+      <div className="space-y-3 sm:col-span-2">{toggle('requirePlanBeforeWithdraw', 'Require an active plan to withdraw', 'Members must have an active plan before requesting a withdrawal.')}{toggle('restrictWithdrawalsToHours', 'Limit withdrawals to set hours', 'Use Uganda local time for the start and end times.')}</div>
+      <Field label="Withdrawal window starts · Uganda time" type="time" value={values.withdrawalStartTime} onChange={event => setValues(current => ({ ...current, withdrawalStartTime: event.target.value }))} required />
+      <Field label="Withdrawal window ends · Uganda time" type="time" value={values.withdrawalEndTime} onChange={event => setValues(current => ({ ...current, withdrawalEndTime: event.target.value }))} required />
+    </AdminSettingsSection>
+    <AdminSettingsSection title="Referrals and access" description="Control invitations, allowed website domains, maintenance, and the opening date.">
+      <div className="sm:col-span-2">{toggle('requireReferralCode', 'Require a referral code to sign up', 'The registration form and server will both enforce this setting.')}</div>
+      <label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-600">Allowed website domains</span><textarea data-testid="input-settings-domains" rows={3} maxLength={13000} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#f07a16] focus:ring-2 focus:ring-orange-100" placeholder="example.com&#10;members.example.com" value={domainsText} onChange={event => setDomainsText(event.target.value)} /><span className="block text-xs text-slate-500">Enter hostnames only, one per line or comma-separated. Wildcards and URL paths are not accepted.</span></label>
+      <div className="sm:col-span-2">{toggle('maintenanceMode', 'Turn on maintenance mode', 'Blocks member access while keeping the administrator console available.')}</div>
+      <label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-600">Maintenance message</span><textarea data-testid="input-settings-maintenance-message" rows={3} maxLength={500} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#f07a16] focus:ring-2 focus:ring-orange-100" value={values.maintenanceMessage} onChange={event => setValues(current => ({ ...current, maintenanceMessage: event.target.value }))} /></label>
+      <div className="sm:col-span-2">{toggle('openingCountdown', 'Show opening countdown', 'When enabled, members see a countdown until the opening date and time.')}</div>
+      <label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-600">Opening date and time · Uganda time</span><input data-testid="input-settings-opening-at" type="datetime-local" className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-[#f07a16] focus:ring-2 focus:ring-orange-100" value={openingAtText} onChange={event => setOpeningAtText(event.target.value)} /><span className="block text-xs text-slate-500">Leave blank to clear the opening date.</span></label>
+    </AdminSettingsSection>
+    <AdminSettingsSection title="Member announcement" description="Show a dismissible announcement dialog when members enter the portal.">
+      <div className="sm:col-span-2">{toggle('announcementEnabled', 'Show announcement dialog', 'The dialog stays dismissed for each member until its title or message changes.')}</div>
+      <Field label="Announcement title" data-testid="input-settings-announcement-title" maxLength={120} value={values.announcementTitle} onChange={event => setValues(current => ({ ...current, announcementTitle: event.target.value }))} />
+      <label className="block space-y-2 sm:col-span-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-600">Announcement message</span><textarea data-testid="input-settings-announcement-message" rows={4} maxLength={2000} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none focus:border-[#f07a16] focus:ring-2 focus:ring-orange-100" value={values.announcementMessage} onChange={event => setValues(current => ({ ...current, announcementMessage: event.target.value }))} /><span className="block text-right text-[10px] text-slate-500">{values.announcementMessage.length}/2000 characters</span></label>
+    </AdminSettingsSection>
+    <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+      <div>{error && <p role="alert" className="text-sm font-medium text-red-600">Settings could not be saved. Check domains, percentages, and text limits.</p>}</div>
+      <Button data-testid="button-submit-settings" type="submit" className="bg-[#f07a16] text-white hover:bg-[#dc6810]" disabled={pending}>{pending ? 'Saving settings…' : 'Save all settings'}<Check className="size-4" /></Button>
+    </div>
+  </form>;
 }
 
 function AdminOverview({ dashboard, loading, error, onReview }: { dashboard?: any; loading: boolean; error: boolean; onReview: () => void }) {
