@@ -766,4 +766,57 @@ if (!bundle) {
     assert.equal(cleared.status, 200);
     assert.equal((await request("/settings")).body.termsText, "");
   });
+
+  test("every supported administrator setting can be edited and persists", async () => {
+    const current = (await request("/admin/settings", { cookie: adminCookie })).body;
+    const input = {
+      ...current,
+      brand: "Editable Crown",
+      currency: "UGX",
+      supportHandle: "@editable-support",
+      telegramUrl: "https://t.me/editable_support",
+      airtelNumber: "0743240196",
+      mtnNumber: "0764312329",
+      payeeName: "Editable Payee",
+      termsText: "Updated member terms",
+      minDeposit: 20000,
+      minWithdrawal: 4000,
+      withdrawalMultiple: 500,
+      welcomeBonus: 1200,
+      checkinBonus: 75,
+      withdrawalFeePercent: 15,
+      l1CommissionPercent: 10,
+      returnMultiple: 3.5,
+      cycleDays: 2,
+      maxWithdrawalsPerUserPerDay: 3,
+      requirePlanBeforeWithdraw: false,
+      restrictWithdrawalsToHours: true,
+      withdrawalStartTime: "08:30",
+      withdrawalEndTime: "16:45",
+      requireReferralCode: true,
+      maintenanceMode: false,
+      maintenanceMessage: "Editable maintenance message",
+      openingCountdown: true,
+      openingAt: "2099-03-04T05:06:00.000Z",
+      allowedDomains: ["members.example.test"],
+      announcementEnabled: true,
+      announcementTitle: "Editable announcement",
+      announcementMessage: "The settings form saves this message.",
+    };
+    const updated = await request("/admin/settings", {
+      method: "PUT",
+      cookie: adminCookie,
+      body: input,
+    });
+    assert.equal(updated.status, 200);
+    for (const [key, value] of Object.entries(input)) {
+      const expected = key === "openingAt" ? new Date(value).toISOString() : value;
+      assert.deepEqual(updated.body[key], expected, `${key} can be edited`);
+    }
+    const reloaded = await request("/admin/settings", { cookie: adminCookie });
+    for (const [key, value] of Object.entries(input)) {
+      const expected = key === "openingAt" ? new Date(value).toISOString() : value;
+      assert.deepEqual(reloaded.body[key], expected, `${key} persists`);
+    }
+  });
 }
