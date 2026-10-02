@@ -1022,7 +1022,7 @@ components:
     WithdrawalInput:
       type: object
       properties:
-        amount: { type: number, minimum: 7000 }
+        amount: { type: number, minimum: 3000 }
         method: { type: string }
         phone: { type: string }
       required: [amount, method, phone]
