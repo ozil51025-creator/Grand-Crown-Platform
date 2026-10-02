@@ -15,8 +15,12 @@ export interface Payment {
   method: string;
   payerPhone: string;
   transactionId: string;
+  /** @nullable */
+  providerTransactionId?: string | null;
   status: string;
   createdAt: string;
   /** @nullable */
   reviewedAt?: string | null;
+  /** @nullable */
+  settledAt?: string | null;
 }

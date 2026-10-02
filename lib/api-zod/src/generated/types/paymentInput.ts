@@ -9,7 +9,5 @@
 export interface PaymentInput {
   productId: string;
   method: string;
-  amount: number;
   payerPhone: string;
-  transactionId: string;
 }

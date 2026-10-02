@@ -202,12 +202,28 @@ export const GetReferralResponse = zod.object({
 })
 
 
+export const GetPaymentsResponseItem = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "productId": zod.string(),
+  "productName": zod.string(),
+  "amount": zod.number(),
+  "method": zod.string(),
+  "payerPhone": zod.string(),
+  "transactionId": zod.string(),
+  "providerTransactionId": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullish(),
+  "settledAt": zod.string().nullish()
+})
+export const GetPaymentsResponse = zod.array(GetPaymentsResponseItem)
+
+
 export const SubmitPaymentBody = zod.object({
   "productId": zod.string(),
   "method": zod.string(),
-  "amount": zod.number(),
-  "payerPhone": zod.string(),
-  "transactionId": zod.string()
+  "payerPhone": zod.string()
 })
 
 export const SubmitPaymentResponse = zod.object({
@@ -223,10 +239,33 @@ export const SubmitPaymentResponse = zod.object({
   "method": zod.string(),
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
+  "providerTransactionId": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
-  "reviewedAt": zod.string().nullish()
+  "reviewedAt": zod.string().nullish(),
+  "settledAt": zod.string().nullish()
 }).optional()
+})
+
+
+export const GetPaymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetPaymentResponse = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "productId": zod.string(),
+  "productName": zod.string(),
+  "amount": zod.number(),
+  "method": zod.string(),
+  "payerPhone": zod.string(),
+  "transactionId": zod.string(),
+  "providerTransactionId": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullish(),
+  "settledAt": zod.string().nullish()
 })
 
 
@@ -471,39 +510,13 @@ export const GetAdminPaymentsResponseItem = zod.object({
   "method": zod.string(),
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
+  "providerTransactionId": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
-  "reviewedAt": zod.string().nullish()
+  "reviewedAt": zod.string().nullish(),
+  "settledAt": zod.string().nullish()
 })
 export const GetAdminPaymentsResponse = zod.array(GetAdminPaymentsResponseItem)
-
-
-export const ReviewPaymentParams = zod.object({
-  "id": zod.coerce.string()
-})
-
-export const ReviewPaymentBody = zod.object({
-  "action": zod.enum(['approve', 'reject'])
-})
-
-export const ReviewPaymentResponse = zod.object({
-  "ok": zod.boolean(),
-  "paymentId": zod.string().optional(),
-  "status": zod.string().optional(),
-  "payment": zod.object({
-  "id": zod.string(),
-  "userId": zod.string(),
-  "productId": zod.string(),
-  "productName": zod.string(),
-  "amount": zod.number(),
-  "method": zod.string(),
-  "payerPhone": zod.string(),
-  "transactionId": zod.string(),
-  "status": zod.string(),
-  "createdAt": zod.string(),
-  "reviewedAt": zod.string().nullish()
-}).optional()
-})
 
 
 export const GetAdminWithdrawalsResponseItem = zod.object({
