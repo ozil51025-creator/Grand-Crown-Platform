@@ -222,6 +222,10 @@ function now() {
   return new Date().toISOString();
 }
 
+function money(value: number, currency: string) {
+  return `${currency} ${Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
 function id(prefix: string) {
   return `${prefix}-${crypto.randomBytes(7).toString("hex").toUpperCase()}`;
 }
@@ -1070,7 +1074,7 @@ router.post("/payments", async (req, res): Promise<void> => {
     return void res.status(503).json({ error: "Mobile-money payments are not configured yet" });
   }
   if (!Number.isSafeInteger(amount) || amount < data.settings.minDeposit) {
-    return res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
+    return void res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
   }
   const transactionId = `GC-${crypto.randomBytes(12).toString("hex").toUpperCase()}`;
   const payment: Payment = {
@@ -1524,12 +1528,13 @@ router.put("/admin/settings", (req, res) => {
   if (allowedDomains.some((domain) => !domain)) {
     return res.status(400).json({ error: "Enter valid website hostnames without paths or wildcards." });
   }
-  if (parsed.data.openingAt && !Number.isFinite(Date.parse(parsed.data.openingAt))) {
+  if (parsed.data.openingAt && !Number.isFinite(parsed.data.openingAt.getTime())) {
     return res.status(400).json({ error: "Enter a valid opening date and time." });
   }
   data.settings = {
     ...data.settings,
     ...parsed.data,
+    openingAt: parsed.data.openingAt?.toISOString() ?? null,
     brand: parsed.data.brand.trim().slice(0, 80),
     allowedDomains: allowedDomains.filter((domain): domain is string => Boolean(domain)),
   };
