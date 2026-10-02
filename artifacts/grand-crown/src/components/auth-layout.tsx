@@ -44,21 +44,17 @@ function SwapText({ id, children, className = '' }: { id: string; children: Reac
 export function AuthLayout({
   mode,
   setMode,
-  onAdmin,
   logo,
   logoSmall,
   form,
   toggle,
-  admin,
 }: {
   mode: Mode;
   setMode: (m: Mode) => void;
-  onAdmin: () => void;
   logo: ReactNode;
   logoSmall: ReactNode;
   form: ReactNode;
   toggle: ReactNode;
-  admin: ReactNode;
 }) {
   const login = mode === 'login';
 
@@ -69,15 +65,6 @@ export function AuthLayout({
     >
       <header className="gc-auth-form-top">
         <div className="gc-auth-small-logo">{logoSmall}</div>
-        <button
-          type="button"
-          data-testid="button-admin-access"
-          onClick={onAdmin}
-          className="gc-auth-admin"
-        >
-          <ShieldCheck size={15} />
-          <span>Admin access</span>
-        </button>
       </header>
       <div className="gc-auth-card">
         <div className="gc-auth-heading">
@@ -136,7 +123,6 @@ export function AuthLayout({
         <div className={`gc-auth-diagonal-line ${login ? 'is-login' : 'is-register'}`} aria-hidden />
         {login ? <>{formPanel}{brandPanel}</> : <>{brandPanel}{formPanel}</>}
       </div>
-      {admin}
     </main>
   );
 }

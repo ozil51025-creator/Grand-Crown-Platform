@@ -7,12 +7,15 @@ import { useToast } from '@/hooks/use-toast';
 import {
   useClaimCheckin,
   useBanUser,
+  useCreateAdminAccount,
   useCreditUser,
   useCreateProduct,
   useDebitUser,
   useDeleteProduct,
+  useDeleteAdminAccount,
   useDeleteUser,
   useGetAdminActivity,
+  useGetAdminAdmins,
   useGetAdminDashboard,
   getGetAdminDashboardQueryKey,
   getGetCurrentUserQueryKey,
@@ -41,7 +44,9 @@ import {
   useSubmitPayment,
   useUpdateAdminSettings,
   type Product,
+  type PublicSettings,
   type Settings,
+  type SettingsInput,
   type User,
 } from '@workspace/api-client-react';
 import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LockKeyhole, LogOut, Menu, MessageCircle, Minus, Package, Phone, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
@@ -124,13 +129,9 @@ function AuthPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
-  const [adminOpen, setAdminOpen] = useState(false);
   const login = useLoginUser();
   const register = useRegisterUser();
-  const adminLogin = useLoginAdmin();
-  const [adminUser, setAdminUser] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [location, setLocation] = useLocation();
+  const memberSettings = useGetSettings();
   const { toast } = useToast();
 
   const submit = (event: FormEvent) => {
@@ -139,26 +140,20 @@ function AuthPage() {
     if (mode === 'login') login.mutate({ data: { phone, password } }, { onSuccess });
     else register.mutate({ data: { phone, password, referralCode: referralCode || undefined } }, { onSuccess });
   };
-  const submitAdmin = (event: FormEvent) => {
-    event.preventDefault();
-    adminLogin.mutate({ data: { username: adminUser, password: adminPassword } }, { onSuccess: () => setLocation('/admin') });
-  };
   const pending = login.isPending || register.isPending;
   return <AuthLayout
     mode={mode}
     setMode={setMode}
-    onAdmin={() => setAdminOpen(true)}
     logo={<Logo />}
     logoSmall={<Logo small />}
     form={<form onSubmit={submit}>
       <AuthField label="Mobile number" icon={Phone} autoComplete="tel" data-testid="input-phone" type="tel" placeholder="07xx xxx xxx" value={phone} onChange={e => setPhone(e.target.value)} required minLength={7} />
       <AuthField label="Password" icon={LockKeyhole} data-testid="input-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
-      <AuthReveal show={mode === 'register'}><AuthField label="Referral code (optional)" icon={Link2} data-testid="input-referral-code" placeholder="e.g. GC-4L8P" value={referralCode} onChange={e => setReferralCode(e.target.value)} /></AuthReveal>
+      <AuthReveal show={mode === 'register'}><AuthField label={`Referral code${memberSettings.data?.requireReferralCode ? ' (required)' : ' (optional)'}`} icon={Link2} data-testid="input-referral-code" placeholder="e.g. GC-4L8P" value={referralCode} onChange={e => setReferralCode(e.target.value)} required={mode === 'register' && !!memberSettings.data?.requireReferralCode} /></AuthReveal>
       {!!(login.error || register.error) && <p data-testid="status-auth-error" role="alert" className="text-sm text-destructive">We couldn't verify those details. Please try again.</p>}
       <Button data-testid="button-submit-auth" type="submit" className="liquid-submit mt-2 min-h-12 w-full rounded-2xl" disabled={pending}>{pending ? 'Checking details…' : mode === 'login' ? 'Login' : 'Sign up'}<ArrowUpRight className="size-4" /></Button>
     </form>}
     toggle={<button type="button" data-testid="button-toggle-auth-mode" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="mt-6 w-full rounded-lg text-center text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">{mode === 'login' ? "Don't have an account? " : 'Already have an account? '}<span className="font-bold text-primary">{mode === 'login' ? 'Sign up' : 'Login'}</span></button>}
-    admin={adminOpen && <Modal title="Administrator access" onClose={() => setAdminOpen(false)}><form onSubmit={submitAdmin} className="space-y-4"><Field label="Username" autoComplete="username" data-testid="input-admin-username" value={adminUser} onChange={e => setAdminUser(e.target.value)} required /><Field label="Password" autoComplete="current-password" data-testid="input-admin-password" type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} required />{adminLogin.error && <p className="text-sm text-destructive">Admin sign in failed. Check your credentials.</p>}<Button data-testid="button-submit-admin-login" className="w-full" disabled={adminLogin.isPending}>{adminLogin.isPending ? 'Verifying…' : 'Open admin console'}</Button></form></Modal>}
   />;
 }
 
