@@ -792,17 +792,12 @@ router.get("/referral", (req, res) => {
   const user = requireUser(req, res, data);
   if (!user) return;
   const direct = data.users.filter((item) => item.referredBy === user.id);
-  const levelOne = new Set(direct.map((item) => item.id));
-  const levelTwo = new Set(data.users.filter((item) => item.referredBy && levelOne.has(item.referredBy)).map((item) => item.id));
-  const levelThree = new Set(data.users.filter((item) => item.referredBy && levelTwo.has(item.referredBy)).map((item) => item.id));
-  const members = data.users
-    .filter((item) => levelOne.has(item.id) || levelTwo.has(item.id) || levelThree.has(item.id))
-    .map((item) => ({
-      id: item.id,
-      phone: item.phone,
-      level: levelOne.has(item.id) ? 1 : levelTwo.has(item.id) ? 2 : 3,
-      createdAt: item.createdAt,
-    }));
+  const members = direct.map((item) => ({
+    id: item.id,
+    phone: item.phone,
+    level: 1,
+    createdAt: item.createdAt,
+  }));
   const commissions = data.transactions
     .filter((transaction) => transaction.userId === user.id && transaction.type === "referral_commission")
     .map((transaction) => ({
@@ -828,7 +823,7 @@ router.get("/payments", (req, res) => {
   return res.json(data.payments.filter((payment) => payment.userId === user.id).slice().reverse());
 });
 
-router.get("/payments/:id", async (req, res): Promise<void> => {
+router.get("/payments/:id", (req, res) => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
@@ -837,129 +832,35 @@ router.get("/payments/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Payment not found" });
     return;
   }
-
-  if (payment.status === "pending") {
-    if (!payment.providerRequestStartedAt) {
-      payment.status = "failed";
-      data.activity.push({ id: id("ACT"), userId: payment.userId, type: "legacy_deposit_closed", createdAt: now() });
-      writeData(data);
-      res.json(payment);
-      return;
-    }
-    const provider = paymentProvider(payment.method);
-    if (!provider) {
-      res.status(409).json({ error: "Payment uses an unsupported provider" });
-      return;
-    }
-    try {
-      const transaction = payment.providerTransactionId
-        ? await pesajetRequest<PesaJetTransaction>(`/payments/${encodeURIComponent(payment.providerTransactionId)}`)
-        : await createPesaJetCollection(payment, provider);
-      const latestData = readData();
-      const latestPayment = latestData.payments.find((item) => item.id === payment.id);
-      if (!latestPayment || latestPayment.userId !== user.id) {
-        res.status(404).json({ error: "Payment not found" });
-        return;
-      }
-      applyVerifiedProviderTransaction(latestData, latestPayment, transaction, provider);
-      writeData(latestData);
-      res.json(latestPayment);
-      return;
-    } catch (error) {
-      req.log.warn(
-        { paymentId: payment.id, statusCode: error instanceof PesaJetRequestError ? error.statusCode : undefined },
-        "Could not refresh PesaJet payment status",
-      );
-      const latestPayment = readData().payments.find((item) => item.id === payment.id);
-      res.json(latestPayment ?? payment);
-      return;
-    }
-  }
   res.json(payment);
 });
 
-router.post("/webhooks/pesajet", (req, res) => {
-  const payload = req.body && typeof req.body === "object" && !Array.isArray(req.body)
-    ? req.body as Record<string, unknown>
-    : undefined;
-  if (!payload || !verifyPesaJetWebhook(payload, req.get("x-webhook-signature") ?? "")) {
-    req.log.warn("Rejected PesaJet webhook with invalid signature");
-    return res.status(401).json({ error: "Invalid webhook signature" });
-  }
-
-  const eventName = payload.event;
-  if (eventName === "ping") return res.json({ received: true });
-  if (!["payment.completed", "payment.failed", "payment.expired"].includes(String(eventName))) {
-    return res.status(400).json({ error: "Unsupported webhook event" });
-  }
-  const reference = typeof payload.reference === "string" ? payload.reference : "";
-  const transactionId = typeof payload.transactionId === "string" ? payload.transactionId : "";
-  const status = typeof payload.status === "string" ? payload.status.toUpperCase() : "";
-  const expectedStatus = eventName === "payment.completed"
-    ? "COMPLETED"
-    : eventName === "payment.failed"
-      ? "FAILED"
-      : "EXPIRED";
-  if (!reference || !transactionId || status !== expectedStatus) {
-    return res.status(400).json({ error: "Incomplete or inconsistent payment event" });
-  }
-
-  const data = readData();
-  const payment = data.payments.find((item) => item.transactionId === reference);
-  if (!payment) {
-    req.log.warn({ reference }, "Ignored PesaJet webhook for an unknown payment");
-    return res.json({ received: true });
-  }
-  const provider = paymentProvider(payment.method);
-  if (
-    !provider ||
-    payload.provider !== provider ||
-    Number(payload.amount) !== payment.amount ||
-    payload.currency !== "UGX" ||
-    (payment.providerTransactionId && payment.providerTransactionId !== transactionId)
-  ) {
-    req.log.warn({ paymentId: payment.id }, "Ignored PesaJet webhook with mismatched payment details");
-    return res.status(400).json({ error: "Payment details did not match" });
-  }
-
-  try {
-    applyVerifiedProviderTransaction(data, payment, {
-      transactionId,
-      reference,
-      amount: Number(payload.amount),
-      currency: String(payload.currency),
-      status,
-      provider,
-      type: "COLLECTION",
-    }, provider);
-  } catch {
-    req.log.warn({ paymentId: payment.id }, "Ignored PesaJet webhook with an invalid transaction");
-    return res.status(400).json({ error: "Payment details did not match" });
-  }
-  writeData(data);
-  return res.json({ received: true });
-});
-
-router.post("/payments", async (req, res): Promise<void> => {
+router.post("/payments", (req, res) => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const amount = bodyNumber(req, "amount");
   const method = bodyString(req, "method");
   const payerPhone = bodyString(req, "payerPhone");
-  const provider = paymentProvider(method);
-  if (!provider) return void res.status(400).json({ error: "Choose a valid payment method" });
+  const payerReference = bodyString(req, "payerReference");
+  if (!["MTN Mobile Money", "Airtel Money"].includes(method)) {
+    return void res.status(400).json({ error: "Choose MTN Mobile Money or Airtel Money" });
+  }
   if (!normalizeUgandaPhone(payerPhone)) {
     return void res.status(400).json({ error: "Enter a valid Ugandan mobile number" });
   }
-  if (data.settings.currency !== "UGX") {
-    return void res.status(503).json({ error: "PesaJet payments require the platform currency to be UGX" });
-  }
-  if (!process.env["PESAJET_API_KEY"]) {
-    return void res.status(503).json({ error: "Mobile-money payments are not configured yet" });
-  }
   if (!Number.isSafeInteger(amount) || amount < data.settings.minDeposit) {
     return void res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
+  }
+  if (payerReference.length < 3 || payerReference.length > 80) {
+    return void res.status(400).json({ error: "Enter the mobile-money transaction reference from your receipt" });
+  }
+  const normalizedReference = payerReference.replace(/\s+/g, "").toUpperCase();
+  const referenceUsed = data.payments.some(
+    (item) => item.payerReference?.replace(/\s+/g, "").toUpperCase() === normalizedReference,
+  );
+  if (referenceUsed) {
+    return void res.status(409).json({ error: "That transaction reference has already been submitted" });
   }
   const transactionId = `GC-${crypto.randomBytes(12).toString("hex").toUpperCase()}`;
   const payment: Payment = {
@@ -968,41 +869,15 @@ router.post("/payments", async (req, res): Promise<void> => {
     amount,
     method,
     payerPhone,
+    payerReference,
     transactionId,
-    providerRequestStartedAt: now(),
     status: "pending",
     createdAt: now(),
   };
   data.payments.push(payment);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_initiated", createdAt: now() });
   writeData(data);
-
-  try {
-    const transaction = await createPesaJetCollection(payment, provider);
-    const latestData = readData();
-    const latestPayment = latestData.payments.find((item) => item.id === payment.id);
-    if (!latestPayment) {
-      res.status(500).json({ error: "Payment record could not be found" });
-      return;
-    }
-    applyVerifiedProviderTransaction(latestData, latestPayment, transaction, provider);
-    writeData(latestData);
-    res.status(201).json({ ok: true, paymentId: payment.id, status: latestPayment.status, payment: latestPayment });
-  } catch (error) {
-    const latestData = readData();
-    const latestPayment = latestData.payments.find((item) => item.id === payment.id);
-    if (error instanceof PesaJetRequestError && error.statusCode && error.statusCode >= 400 && error.statusCode < 500 && latestPayment?.status === "pending") {
-      latestPayment.status = "failed";
-      latestData.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_failed", createdAt: now() });
-      writeData(latestData);
-    }
-    req.log.warn(
-      { paymentId: payment.id, statusCode: error instanceof PesaJetRequestError ? error.statusCode : undefined },
-      "PesaJet collection request did not return a verified transaction",
-    );
-    const current = latestData.payments.find((item) => item.id === payment.id) ?? payment;
-    res.status(201).json({ ok: true, paymentId: payment.id, status: current.status, payment: current });
-  }
+  return res.status(201).json({ ok: true, paymentId: payment.id, status: payment.status, payment });
 });
 
 router.get("/purchases", (req, res) => {
