@@ -197,6 +197,18 @@ if (!bundle) {
   test("manual deposits require a unique transfer reference and credit product funds only after admin approval", async () => {
     const member = await register();
     const before = readStore().users.find((user) => user.id === member.user.id);
+    const belowMinimum = await request("/payments", {
+      method: "POST",
+      cookie: member.cookie,
+      body: {
+        amount: 18999,
+        method: "MTN Mobile Money",
+        payerPhone: "0700 000 001",
+        payerReference: "MTN-REF-BELOW-MINIMUM",
+      },
+    });
+    assert.equal(belowMinimum.status, 400);
+
     const created = await request("/payments", {
       method: "POST",
       cookie: member.cookie,
@@ -318,6 +330,48 @@ if (!bundle) {
     const storedMember = readStore().users.find((user) => user.id === member.user.id);
     assert.equal(storedMember.depositBalance, 0);
     assert.equal(readStore().transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
+  });
+
+  test("withdrawals require at least UGX 3000 and deduct the 15% fee from withdrawable funds", async () => {
+    const member = await register();
+    const data = readStore();
+    const storedMember = data.users.find((user) => user.id === member.user.id);
+    storedMember.wallet = 5000;
+    data.purchases.push({
+      id: "MEMBER-ACTIVE-PURCHASE",
+      userId: member.user.id,
+      productId: "TEST-PRODUCT",
+      productName: "Existing product",
+      amount: 10000,
+      status: "active",
+      purchasedAt: new Date().toISOString(),
+      earningsCredited: 0,
+    });
+    data.settings = {
+      ...data.settings,
+      minWithdrawal: 3000,
+      withdrawalFeePercent: 15,
+      restrictWithdrawalsToHours: false,
+    };
+    saveStore(data);
+
+    const belowMinimum = await request("/withdrawals", {
+      method: "POST",
+      cookie: member.cookie,
+      body: { amount: 2999, method: "MTN Mobile Money", phone: "0700000001" },
+    });
+    assert.equal(belowMinimum.status, 400);
+
+    const result = await request("/withdrawals", {
+      method: "POST",
+      cookie: member.cookie,
+      body: { amount: 3000, method: "MTN Mobile Money", phone: "0700000001" },
+    });
+    assert.equal(result.status, 201);
+    assert.equal(result.body.withdrawal.amount, 3000);
+    assert.equal(result.body.withdrawal.fee, 450);
+    assert.equal(result.body.withdrawal.netAmount, 2550);
+    assert.equal(readStore().users.find((user) => user.id === member.user.id).wallet, 2000);
   });
 
   test("new purchases pay only 10% to Level 1 while preserving historical Level 2 and Level 3 credits", async () => {
