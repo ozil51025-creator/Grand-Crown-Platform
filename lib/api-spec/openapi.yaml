@@ -196,6 +196,22 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Purchase"
+    post:
+      operationId: buyProduct
+      tags: [customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseInput"
+      responses:
+        "201":
+          description: Product purchased using non-withdrawable product funds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
   /withdrawals:
     get:
       operationId: getWithdrawals
@@ -823,11 +839,12 @@ components:
         phone: { type: string }
         referralCode: { type: string }
         wallet: { type: number }
+        depositBalance: { type: number }
         totalEarned: { type: number }
         createdAt: { type: string }
         lastCheckin: { type: ["string", "null"] }
         banned: { type: boolean }
-      required: [id, phone, referralCode, wallet, totalEarned, createdAt, banned]
+      required: [id, phone, referralCode, wallet, depositBalance, totalEarned, createdAt, banned]
     RegisterInput:
       type: object
       properties:
@@ -912,6 +929,7 @@ components:
       type: object
       properties:
         id: { type: string }
+        paymentId: { type: ["string", "null"] }
         userId: { type: string }
         productId: { type: string }
         productName: { type: string }
@@ -920,6 +938,11 @@ components:
         purchasedAt: { type: string }
         earningsCredited: { type: integer }
       required: [id, userId, productId, productName, amount, status, purchasedAt]
+    PurchaseInput:
+      type: object
+      properties:
+        productId: { type: string }
+      required: [productId]
     Transaction:
       type: object
       properties:
@@ -942,8 +965,6 @@ components:
       properties:
         id: { type: string }
         userId: { type: string }
-        productId: { type: string }
-        productName: { type: string }
         amount: { type: number }
         method: { type: string }
         payerPhone: { type: string }
@@ -953,14 +974,14 @@ components:
         createdAt: { type: string }
         reviewedAt: { type: ["string", "null"] }
         settledAt: { type: ["string", "null"] }
-      required: [id, userId, productId, productName, amount, method, payerPhone, transactionId, status, createdAt]
+      required: [id, userId, amount, method, payerPhone, transactionId, status, createdAt]
     PaymentInput:
       type: object
       properties:
-        productId: { type: string }
+        amount: { type: number, minimum: 1 }
         method: { type: string }
         payerPhone: { type: string }
-      required: [productId, method, payerPhone]
+      required: [amount, method, payerPhone]
     PaymentResponse:
       type: object
       properties:
