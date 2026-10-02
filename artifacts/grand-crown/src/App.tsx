@@ -418,19 +418,35 @@ function ActivityTable({ transactions, currency }: { transactions: any[]; curren
   return <div className="space-y-2">{transactions.slice(0, 5).map(item => <div key={item.id} data-testid={`row-transaction-${item.id}`} className="flex items-center justify-between rounded-xl px-3 py-3 transition hover:bg-secondary/60"><div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-xl bg-secondary"><ArrowUpRight className="size-4 text-accent-foreground" /></div><div><div className="text-sm font-semibold capitalize">{item.type.replaceAll('_', ' ')}</div><div className="text-xs text-muted-foreground">{shortDate(item.createdAt)}</div></div></div><div className="font-mono text-sm font-semibold">{money(item.amount, currency)}</div></div>)}</div>;
 }
 
-function PaymentModal({ product, settings, values, setValues, onClose, onSubmit, pending, error }: { product: Product; settings?: PublicSettings; values: { method: string; payerPhone: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
-  return <Modal title={`Pay for ${product.name}`} onClose={onClose} wide>
+function DepositModal({ amount, setAmount, settings, values, setValues, onClose, onSubmit, pending, error }: { amount: string; setAmount: (value: string) => void; settings?: PublicSettings; values: { method: string; payerPhone: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
+  return <Modal title="Deposit product funds" onClose={onClose} wide>
     <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
-      <div className="flex items-center justify-between gap-4"><span className="text-sm text-primary-foreground/65">Plan amount</span><span className="font-display text-2xl font-semibold">{money(product.price, settings?.currency)}</span></div>
-      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />This payment is for the selected product only; it is not withdrawable wallet credit. PesaJet will prompt your phone. Enter your mobile-money PIN only on your handset, never here.</div>
+      <div className="flex items-center justify-between gap-4"><span className="text-sm text-primary-foreground/65">Deposit amount</span><span className="font-display text-2xl font-semibold">{money(Number(amount) || 0, settings?.currency)}</span></div>
+      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />Confirmed funds are credited to your product balance, not your withdrawable wallet. PesaJet will prompt your phone. Enter your mobile-money PIN only on your handset, never here.</div>
     </div>
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <Field label={`Deposit amount · minimum ${money(settings?.minDeposit ?? 500, settings?.currency)}`} data-testid="input-deposit-amount" type="number" inputMode="numeric" min={settings?.minDeposit ?? 500} step="1" value={amount} onChange={event => setAmount(event.target.value)} required />
       <label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Mobile-money network</span><select data-testid="select-payment-method" className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none focus:border-accent" value={values.method} onChange={event => setValues({ ...values, method: event.target.value })}><option>MTN Mobile Money</option><option>Airtel Money</option></select></label>
       <Field label="Phone number to prompt" data-testid="input-payer-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="07xx xxx xxx or +256..." value={values.payerPhone} onChange={event => setValues({ ...values, payerPhone: event.target.value })} required />
-      <p className="text-xs leading-5 text-muted-foreground">The amount is set by the plan you selected. A prompt will appear on this phone after you continue.</p>
+      <p className="text-xs leading-5 text-muted-foreground">A prompt appears on this phone after you continue. Product funds are credited only after PesaJet confirms settlement.</p>
       {error && <p role="alert" className="text-sm text-destructive">PesaJet could not create the payment request. Check the number or try again later.</p>}
-      <Button data-testid="button-submit-payment" type="submit" className="w-full" disabled={pending}>{pending ? 'Sending phone prompt…' : 'Send payment prompt'}<ArrowUpRight className="size-4" /></Button>
+      <Button data-testid="button-submit-payment" type="submit" className="w-full" disabled={pending}>{pending ? 'Sending phone prompt…' : 'Send deposit prompt'}<ArrowUpRight className="size-4" /></Button>
     </form>
+  </Modal>;
+}
+
+function PurchaseModal({ product, depositBalance, currency, onClose, onPurchase, onDeposit, pending, error }: { product: Product; depositBalance: number; currency: string; onClose: () => void; onPurchase: () => void; onDeposit: (amount: number) => void; pending: boolean; error?: boolean }) {
+  const shortfall = Math.max(0, product.price - depositBalance);
+  return <Modal title={`Buy ${product.name}`} onClose={onClose}>
+    <div className="rounded-2xl bg-secondary p-4 text-sm">
+      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Product price</span><span className="font-mono font-semibold">{money(product.price, currency)}</span></div>
+      <div className="mt-2 flex justify-between gap-3"><span className="text-muted-foreground">Product funds available</span><span className="font-mono font-semibold">{money(depositBalance, currency)}</span></div>
+      <div className="mt-3 border-t border-border pt-3 text-xs leading-5 text-muted-foreground">Product funds are purchase-only. This purchase will not use your withdrawable earnings balance.</div>
+    </div>
+    {error && <p role="alert" className="mt-4 text-sm text-destructive">We couldn't complete the purchase. Refresh your balance and try again.</p>}
+    {shortfall > 0
+      ? <><p className="mt-4 text-sm text-muted-foreground">Deposit {money(shortfall, currency)} more to buy this product.</p><Button data-testid="button-deposit-shortfall" className="mt-5 w-full" onClick={() => onDeposit(shortfall)}>Deposit funds <ArrowDownToLine className="size-4" /></Button></>
+      : <Button data-testid="button-confirm-product-purchase" className="mt-5 w-full" onClick={onPurchase} disabled={pending}>{pending ? 'Completing purchase…' : 'Buy with product funds'}<ArrowUpRight className="size-4" /></Button>}
   </Modal>;
 }
 
