@@ -28,6 +28,8 @@ import {
   useGetAdminWithdrawals,
   useGetCurrentUser,
   useGetDashboard,
+  useGetPayment,
+  useGetPayments,
   useGetProducts,
   useGetPurchases,
   useGetReferral,
@@ -39,7 +41,6 @@ import {
   useLogoutUser,
   useRegisterUser,
   useRequestWithdrawal,
-  useReviewPayment,
   useReviewWithdrawal,
   useSubmitPayment,
   useUpdateAdminSettings,
@@ -113,10 +114,6 @@ function Logo({ small = false }: { small?: boolean }) {
       </div>
     </div>
   );
-}
-
-function newPaymentReference() {
-  return `GC-${window.crypto.randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase()}`;
 }
 
 function Button({ children, variant = 'primary', className = '', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'outline' | 'danger' }) {
@@ -259,6 +256,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const dashboard = useGetDashboard();
   const products = useGetProducts();
   const purchases = useGetPurchases();
+  const payments = useGetPayments();
   const referrals = useGetReferral();
   const withdrawals = useGetWithdrawals();
   const settings = useGetSettings();
@@ -266,8 +264,9 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const requestWithdrawal = useRequestWithdrawal();
   const submitPayment = useSubmitPayment();
   const { toast } = useToast();
-  const [modal, setModal] = useState<'payment' | 'withdrawal' | null>(null);
+  const [modal, setModal] = useState<'payment' | 'payment-status' | 'withdrawal' | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
   const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone });
   const [withdrawal, setWithdrawal] = useState({ amount: '', method: 'MTN Mobile Money', phone: user.phone });
@@ -280,7 +279,23 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
     ? planImage(primaryPlan?.productName || 'Presidential Suite')
     : undefined;
   const openPayment = (product: Product) => { setSelectedProduct(product); setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone }); setModal('payment'); };
-  const submitPaymentForm = (event: FormEvent) => { event.preventDefault(); if (!selectedProduct) return; submitPayment.mutate({ data: { productId: selectedProduct.id, amount: selectedProduct.price, ...payment, transactionId: newPaymentReference() } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Payment prompt sent', description: 'Check your phone and enter your mobile-money PIN. The plan activates after payment verification.' }); } }); };
+  const openPaymentStatus = (paymentId: string) => { setSelectedPaymentId(paymentId); setModal('payment-status'); };
+  const submitPaymentForm = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedProduct) return;
+    submitPayment.mutate({ data: { productId: selectedProduct.id, ...payment } }, {
+      onSuccess: result => {
+        queryClient.invalidateQueries();
+        if (result.paymentId) {
+          setSelectedPaymentId(result.paymentId);
+          setModal('payment-status');
+          toast({ title: 'Payment request created', description: 'Check your phone for the mobile-money prompt. The product activates only after PesaJet confirms payment.' });
+        } else {
+          setModal(null);
+        }
+      },
+    });
+  };
   const submitWithdrawalForm = (event: FormEvent) => { event.preventDefault(); requestWithdrawal.mutate({ data: { amount: Number(withdrawal.amount), method: withdrawal.method, phone: withdrawal.phone } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Withdrawal requested', description: 'Your request is now waiting for administrator review.' }); } }); };
   const claim = () => checkin.mutate(undefined, { onSuccess: result => { queryClient.invalidateQueries(); toast({ title: `Check-in credited ${money(result.reward, currency)}`, description: 'Your daily rhythm is intact.' }); } });
   const announcementKey = `${settings.data?.announcementTitle || ''}:${settings.data?.announcementMessage || ''}`;
@@ -297,12 +312,12 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
     setDismissedAnnouncement(announcementKey);
   };
   let view: ReactNode;
-  if (active === 'products') view = <ProductsView products={products.data} loading={products.isLoading} error={!!products.error} onBuy={openPayment} currency={currency} />;
+  if (active === 'products') view = <ProductsView products={products.data} loading={products.isLoading} error={!!products.error} onBuy={openPayment} currency={currency} payments={payments.data} onCheckPayment={openPaymentStatus} />;
   else if (active === 'purchases') view = <PurchasesView purchases={purchases.data} loading={purchases.isLoading} error={!!purchases.error} currency={currency} onBrowse={() => setActive('products')} />;
   else if (active === 'referrals') view = <ReferralView referrals={referrals.data} loading={referrals.isLoading} error={!!referrals.error} currency={currency} />;
   else if (active === 'account') view = <AccountPage user={userData} settings={settings.data} withdrawals={withdrawals.data} withdrawalsLoading={withdrawals.isLoading} withdrawalsError={!!withdrawals.error} currency={currency} canWithdraw={dashboard.data?.canWithdraw} onDeposit={() => setActive('products')} onWithdraw={() => setModal('withdrawal')} onLogout={onLogout} loggingOut={loggingOut} />;
   else view = <OverviewView dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} currency={currency} settings={settings.data} onCheckin={claim} checkingIn={checkin.isPending} onWithdraw={() => setModal('withdrawal')} onBuy={() => setActive('products')} />;
-  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'payment' && selectedProduct && <PaymentModal product={selectedProduct} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitPaymentForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} settings={settings.data} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}{settings.data?.announcementEnabled && dismissedAnnouncement !== announcementKey && <Modal title={settings.data.announcementTitle || 'Grand Crown update'} onClose={dismissAnnouncement}><div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{settings.data.announcementMessage || 'There are no additional details yet.'}</div><Button className="mt-6 w-full" onClick={dismissAnnouncement}>Continue</Button></Modal>}</>;
+  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'payment' && selectedProduct && <PaymentModal product={selectedProduct} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitPaymentForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'payment-status' && selectedPaymentId && <PaymentStatusModal paymentId={selectedPaymentId} onClose={() => { setModal(null); queryClient.invalidateQueries(); }} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} settings={settings.data} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}{settings.data?.announcementEnabled && dismissedAnnouncement !== announcementKey && <Modal title={settings.data.announcementTitle || 'Grand Crown update'} onClose={dismissAnnouncement}><div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{settings.data.announcementMessage || 'There are no additional details yet.'}</div><Button className="mt-6 w-full" onClick={dismissAnnouncement}>Continue</Button></Modal>}</>;
 }
 
 function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {
