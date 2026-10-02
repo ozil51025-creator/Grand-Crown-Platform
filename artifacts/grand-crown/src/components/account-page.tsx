@@ -200,7 +200,7 @@ function GiftForm({ currency }: { currency: string }) {
   </form>;
 }
 
-function TermsBody({ settings, adminUrl, adminHandle }: { settings?: Settings; adminUrl: string; adminHandle: string }) {
+function TermsBody({ settings, adminUrl, adminHandle }: { settings?: PublicSettings; adminUrl: string; adminHandle: string }) {
   const text = settings?.termsText?.trim();
   if (!text) return <div data-testid="status-terms-unpublished" className="text-sm leading-6 text-white/65">Grand Crown has not published its terms and conditions yet. For questions about how plans, payments and withdrawals work, <a href={adminUrl} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">contact {adminHandle}</a>.</div>;
   return <div data-testid="text-terms" className="max-h-96 overflow-y-auto whitespace-pre-wrap pr-1 text-sm leading-6 text-white/80">{text}</div>;
