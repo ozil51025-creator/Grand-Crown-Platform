@@ -14,6 +14,7 @@ export interface AdminDashboard {
   withdrawals: number;
   transactions: number;
   walletBalances: number;
+  productFundBalances: number;
   totalDeposited: number;
   totalWithdrawn: number;
   totalInvested: number;

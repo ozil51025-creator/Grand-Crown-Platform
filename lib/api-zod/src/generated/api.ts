@@ -368,6 +368,7 @@ export const GetAdminDashboardResponse = zod.object({
   "withdrawals": zod.number().int(),
   "transactions": zod.number().int(),
   "walletBalances": zod.number(),
+  "productFundBalances": zod.number(),
   "totalDeposited": zod.number(),
   "totalWithdrawn": zod.number(),
   "totalInvested": zod.number()
