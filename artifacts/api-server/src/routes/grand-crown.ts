@@ -223,6 +223,9 @@ const dataFile = path.resolve(
     path.join(process.cwd(), "artifacts/api-server/data.json"),
 );
 const fileStorageEnabled = Boolean(process.env["GRAND_CROWN_DATA_FILE"]);
+if (fileStorageEnabled && process.env["NODE_ENV"] === "production") {
+  throw new Error("GRAND_CROWN_DATA_FILE is test-only; production must use PostgreSQL.");
+}
 const loginAttempts = new Map<string, number[]>();
 const sessionTtl = 12 * 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
