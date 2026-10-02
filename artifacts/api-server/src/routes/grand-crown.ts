@@ -256,6 +256,77 @@ function readData(): Data {
   }
 }
 
+function publicSettings(settings: Settings) {
+  const { allowedDomains: _allowedDomains, ...visible } = settings;
+  return visible;
+}
+
+function getAccessStatus(settings: Settings) {
+  if (settings.maintenanceMode) {
+    return {
+      mode: "maintenance" as const,
+      message: settings.maintenanceMessage || "We’re performing maintenance. Please check back shortly.",
+      openingAt: settings.openingAt,
+    };
+  }
+  const openingAt = settings.openingAt;
+  if (settings.openingCountdown && openingAt && Date.parse(openingAt) > Date.now()) {
+    return {
+      mode: "opening" as const,
+      message: "Grand Crown is getting ready to open.",
+      openingAt,
+    };
+  }
+  return { mode: "available" as const, message: "", openingAt: null };
+}
+
+function normalizeAllowedDomain(value: string): string | undefined {
+  const input = value.trim();
+  if (!input || input.includes("*")) return undefined;
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `https://${input}`);
+    if (url.username || url.password || (url.pathname !== "/" && url.pathname !== "") || url.search || url.hash) {
+      return undefined;
+    }
+    return url.hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+function ugandaDateKey(value: Date | string = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Kampala",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value instanceof Date ? value : new Date(value));
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function withinWithdrawalWindow(settings: Settings, date = new Date()) {
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  const currentParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Kampala",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const currentMinutes =
+    Number(currentParts.find((item) => item.type === "hour")?.value ?? 0) * 60 +
+    Number(currentParts.find((item) => item.type === "minute")?.value ?? 0);
+  const start = toMinutes(settings.withdrawalStartTime);
+  const end = toMinutes(settings.withdrawalEndTime);
+  if (start === end) return true;
+  return start < end
+    ? currentMinutes >= start && currentMinutes < end
+    : currentMinutes >= start || currentMinutes < end;
+}
+
 function writeData(data: Data) {
   fs.mkdirSync(path.dirname(dataFile), { recursive: true });
   const tempFile = `${dataFile}.tmp`;
@@ -365,6 +436,11 @@ function isAdmin(req: Request) {
 }
 
 function requireUser(req: Request, res: Response, data: Data) {
+  const access = getAccessStatus(data.settings);
+  if (access.mode !== "available") {
+    res.status(503).json({ error: access.message, accessMode: access.mode, openingAt: access.openingAt });
+    return undefined;
+  }
   const user = currentUser(req, data);
   if (!user) {
     res.status(401).json({ error: "Login required" });
@@ -432,6 +508,7 @@ function addTransaction(
 
 function processEarnings(data: Data) {
   let changed = false;
+  const cycleMs = dayMs * Math.max(1, data.settings.cycleDays || 1);
   for (const purchase of data.purchases) {
     const product = data.products.find((item) => item.id === purchase.productId);
     const user = data.users.find((item) => item.id === purchase.userId);
@@ -439,7 +516,7 @@ function processEarnings(data: Data) {
     const started = new Date(purchase.purchasedAt).getTime();
     if (!Number.isFinite(started)) continue;
     const target = Math.min(
-      Math.max(0, Math.floor((Date.now() - started) / dayMs)),
+      Math.max(0, Math.floor((Date.now() - started) / cycleMs)),
       product.days,
     );
     while (purchase.earningsCredited < target) {
@@ -466,7 +543,11 @@ function processEarnings(data: Data) {
 }
 
 function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
-  const rates = [0.25, 0.02, 0.01];
+  const rates = [
+    data.settings.l1CommissionPercent,
+    data.settings.l2CommissionPercent,
+    data.settings.l3CommissionPercent,
+  ].map((rate) => rate / 100);
   const seen = new Set([buyer.id]);
   let referrerId = buyer.referredBy;
   for (let index = 0; index < rates.length && referrerId; index += 1) {
@@ -497,6 +578,24 @@ function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
 
 const router: IRouter = Router();
 
+router.use((req, res, next) => {
+  const origin = req.get("origin");
+  if (!origin) return next();
+  let originHost: string;
+  let requestHost: string;
+  try {
+    originHost = new URL(origin).hostname.toLowerCase();
+    requestHost = new URL(`${req.protocol}://${req.get("host")}`).hostname.toLowerCase();
+  } catch {
+    return res.status(403).json({ error: "This website is not allowed to access Grand Crown." });
+  }
+  const allowed = readData().settings.allowedDomains
+    .map((domain) => normalizeAllowedDomain(domain))
+    .filter((domain): domain is string => Boolean(domain));
+  if (originHost === requestHost || allowed.includes(originHost)) return next();
+  return res.status(403).json({ error: "This website is not allowed to access Grand Crown." });
+});
+
 registerAccountRoutes(router, {
   readData,
   writeData,
@@ -515,7 +614,7 @@ registerAccountRoutes(router, {
   },
 });
 
-router.get("/settings", (_req, res) => res.json(readData().settings));
+router.get("/settings", (_req, res) => res.json(publicSettings(readData().settings)));
 router.get("/products", (_req, res) => res.json(readData().products));
 
 function generateReferralCode(users: User[]): string | undefined {
@@ -529,6 +628,10 @@ function generateReferralCode(users: User[]): string | undefined {
 
 router.post("/auth/register", (req, res) => {
   const data = readData();
+  const access = getAccessStatus(data.settings);
+  if (access.mode !== "available") {
+    return res.status(503).json({ error: access.message, accessMode: access.mode, openingAt: access.openingAt });
+  }
   const phone = bodyString(req, "phone");
   const password = bodyPassword(req);
   const sponsorCode = bodyString(req, "referralCode").toUpperCase();
@@ -537,6 +640,9 @@ router.post("/auth/register", (req, res) => {
   }
   if (data.users.some((user) => user.phone === phone)) {
     return res.status(409).json({ error: "An account with that phone already exists" });
+  }
+  if (data.settings.requireReferralCode && !sponsorCode) {
+    return res.status(400).json({ error: "Enter an invitation referral code to create an account" });
   }
   const parent = sponsorCode
     ? data.users.find((user) => user.referralCode === sponsorCode)
@@ -555,14 +661,14 @@ router.post("/auth/register", (req, res) => {
     passwordFormat: "raw",
     referralCode: memberReferralCode,
     referredBy: parent?.id ?? null,
-    wallet: 1000,
-    totalEarned: 1000,
+    wallet: data.settings.welcomeBonus,
+    totalEarned: data.settings.welcomeBonus,
     createdAt: now(),
     lastCheckin: null,
     banned: false,
   };
   data.users.push(user);
-  addTransaction(data, user.id, "signup_bonus", 1000);
+  addTransaction(data, user.id, "signup_bonus", data.settings.welcomeBonus);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "signup", createdAt: now() });
   writeData(data);
   const token = crypto.randomBytes(32).toString("hex");
@@ -576,6 +682,10 @@ router.post("/auth/login", (req, res) => {
     return res.status(429).json({ error: "Too many login attempts. Try again later." });
   }
   const data = readData();
+  const access = getAccessStatus(data.settings);
+  if (access.mode !== "available") {
+    return res.status(503).json({ error: access.message, accessMode: access.mode, openingAt: access.openingAt });
+  }
   const user = data.users.find((item) => item.phone === bodyString(req, "phone"));
   if (!user || user.banned || !verifyPassword(bodyPassword(req), user)) {
     return res.status(401).json({ error: "Invalid phone or password" });
@@ -595,8 +705,24 @@ router.post("/auth/logout", (req, res) => {
 
 router.get("/auth/me", (req, res) => {
   const data = readData();
+  const access = getAccessStatus(data.settings);
+  if (access.mode !== "available") {
+    return res.json({
+      loggedIn: false,
+      user: null,
+      accessMode: access.mode,
+      accessMessage: access.message,
+      openingAt: access.openingAt,
+    });
+  }
   const user = currentUser(req, data);
-  return res.json({ loggedIn: Boolean(user), user: user ? publicUser(user) : null });
+  return res.json({
+    loggedIn: Boolean(user),
+    user: user ? publicUser(user) : null,
+    accessMode: "available",
+    accessMessage: "",
+    openingAt: null,
+  });
 });
 
 router.get("/dashboard", (req, res) => {
@@ -620,14 +746,15 @@ router.post("/checkin", (req, res) => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ugandaDateKey();
   if (user.lastCheckin === today) return res.status(409).json({ error: "Daily check-in already claimed" });
   user.lastCheckin = today;
-  user.wallet += 50;
-  user.totalEarned += 50;
-  addTransaction(data, user.id, "checkin", 50);
+  const reward = data.settings.checkinBonus;
+  user.wallet += reward;
+  user.totalEarned += reward;
+  addTransaction(data, user.id, "checkin", reward);
   writeData(data);
-  return res.json({ ok: true, reward: 50, user: publicUser(user) });
+  return res.json({ ok: true, reward, user: publicUser(user) });
 });
 
 router.get("/referral", (req, res) => {
@@ -680,6 +807,9 @@ router.post("/payments", (req, res) => {
     return res.status(400).json({ error: "Enter a valid payer phone and transaction reference" });
   }
   if (amount !== product.price) return res.status(400).json({ error: "Amount must match the selected product price" });
+  if (amount < data.settings.minDeposit) {
+    return res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
+  }
   if (data.payments.some((payment) => payment.transactionId.toLowerCase() === transactionId.toLowerCase())) {
     return res.status(409).json({ error: "That transaction reference has already been submitted" });
   }
@@ -719,16 +849,40 @@ router.post("/withdrawals", (req, res) => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
-  if (activePurchases(data, user.id).length === 0) return res.status(403).json({ error: "Approve at least one product before withdrawing" });
   const amount = bodyNumber(req, "amount");
   const method = bodyString(req, "method");
   const phone = bodyString(req, "phone");
-  if (!Number.isFinite(amount) || amount < 7000) return res.status(400).json({ error: "Minimum withdrawal is UGX 7,000" });
+  if (data.settings.requirePlanBeforeWithdraw && activePurchases(data, user.id).length === 0) {
+    return res.status(403).json({ error: "Approve at least one product before withdrawing" });
+  }
+  if (data.withdrawals.some((item) => item.userId === user.id && ["pending", "processing", "sending"].includes(item.status))) {
+    return res.status(409).json({ error: "You already have a withdrawal awaiting review" });
+  }
+  const minimum = data.settings.minWithdrawal;
+  if (!Number.isFinite(amount) || amount < minimum) {
+    return res.status(400).json({ error: `Minimum withdrawal is ${money(minimum, data.settings.currency)}` });
+  }
+  if (data.settings.withdrawalMultiple > 0 && amount % data.settings.withdrawalMultiple !== 0) {
+    return res.status(400).json({ error: `Withdrawal amount must be a multiple of ${money(data.settings.withdrawalMultiple, data.settings.currency)}` });
+  }
   if (amount > user.wallet) return res.status(400).json({ error: "Insufficient wallet balance" });
+  if (data.settings.maxWithdrawalsPerUserPerDay > 0) {
+    const withdrawalsToday = data.withdrawals.filter((item) =>
+      item.userId === user.id && ugandaDateKey(item.createdAt) === ugandaDateKey(),
+    ).length;
+    if (withdrawalsToday >= data.settings.maxWithdrawalsPerUserPerDay) {
+      return res.status(429).json({ error: "You have reached the daily withdrawal limit" });
+    }
+  }
+  if (data.settings.restrictWithdrawalsToHours && !withinWithdrawalWindow(data.settings)) {
+    return res.status(403).json({
+      error: `Withdrawals are available between ${data.settings.withdrawalStartTime} and ${data.settings.withdrawalEndTime} Uganda time`,
+    });
+  }
   if (!["Airtel Money", "MTN Mobile Money"].includes(method) || !/^\+?[0-9]{7,15}$/.test(phone)) {
     return res.status(400).json({ error: "Enter valid withdrawal details" });
   }
-  const fee = Math.round(amount * 0.12);
+  const fee = Math.round(amount * data.settings.withdrawalFeePercent / 100);
   const withdrawal: Withdrawal = {
     id: id("WD"),
     userId: user.id,
