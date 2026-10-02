@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { ReviewPaymentBody, SubmitPaymentBody, UpdateAdminSettingsBody } from "@workspace/api-zod";
+import { ResetUserPasswordBody, ReviewPaymentBody, SubmitPaymentBody, UpdateAdminSettingsBody } from "@workspace/api-zod";
 import { registerAccountRoutes, type StoredGiftCode } from "./account";
 
 type Product = {
@@ -1174,6 +1174,33 @@ router.put("/admin/users/:id/ban", (req, res) => {
   data.activity.push({ id: id("ACT"), userId: user.id, type: banned ? "user_banned" : "user_unbanned", createdAt: now() });
   writeData(data);
   return res.json({ ok: true, user: publicUser(user) });
+});
+
+router.post("/admin/users/:id/password", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const rawId = req.params.id;
+  const userId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const data = readData();
+  const user = data.users.find((item) => item.id === userId);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  const parsed = ResetUserPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Enter a temporary password of 8–128 characters." });
+    return;
+  }
+  const password = hashPassword(parsed.data.password);
+  user.passwordHash = password.hash;
+  user.passwordSalt = password.salt;
+  user.passwordFormat = "raw";
+  for (const [token, session] of userSessions) {
+    if (session.userId === user.id) userSessions.delete(token);
+  }
+  data.activity.push({ id: id("ACT"), userId: user.id, type: "admin_password_reset", createdAt: now() });
+  writeData(data);
+  res.json({ ok: true });
 });
 
 router.delete("/admin/users/:id", (req, res) => {

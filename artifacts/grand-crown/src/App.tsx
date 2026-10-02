@@ -45,6 +45,7 @@ import {
   useRequestWithdrawal,
   useReviewPayment,
   useReviewWithdrawal,
+  useResetUserPassword,
   useSubmitPayment,
   useUpdateAdminSettings,
   type Payment,
@@ -54,7 +55,7 @@ import {
   type SettingsInput,
   type User,
 } from '@workspace/api-client-react';
-import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, LayoutDashboard, Link2, LockKeyhole, LogOut, Menu, MessageCircle, Minus, Package, Phone, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
+import { Activity, ArrowDownToLine, ArrowUpRight, Ban, BarChart3, Bell, Check, ChevronRight, Clock3, Copy, Crown, Eye, Gift, KeyRound, LayoutDashboard, Link2, LockKeyhole, LogOut, Menu, MessageCircle, Minus, Package, Phone, Plus, Receipt, Settings2, ShieldCheck, Sparkles, Target, Trash2, TrendingUp, UserRound, UserX, Users, Wallet, X, XCircle } from 'lucide-react';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { AuthLayout, AuthReveal } from '@/components/auth-layout';
@@ -599,15 +600,17 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const debitUser = useDebitUser();
   const banUser = useBanUser();
   const deleteUser = useDeleteUser();
+  const resetUserPassword = useResetUserPassword();
   const createProduct = useCreateProduct();
   const deleteProduct = useDeleteProduct();
   const updateSettings = useUpdateAdminSettings();
   const createAdmin = useCreateAdminAccount();
   const deleteAdmin = useDeleteAdminAccount();
-  const [modal, setModal] = useState<'product' | 'credit' | 'debit' | null>(null);
+  const [modal, setModal] = useState<'product' | 'credit' | 'debit' | 'reset-password' | null>(null);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userAmount, setUserAmount] = useState('');
   const [userNote, setUserNote] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
   const [product, setProduct] = useState({ name: '', price: '', daily: '', total: '', days: '' });
   const [adminForm, setAdminForm] = useState({ username: '', password: '' });
   const { toast } = useToast();
@@ -649,6 +652,20 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
     });
   };
   const openUserWallet = (user: any, action: 'credit' | 'debit') => { setSelectedUser(user); setUserAmount(''); setUserNote(''); setModal(action); };
+  const openPasswordReset = (user: any) => { setSelectedUser(user); setResetPassword(''); setModal('reset-password'); };
+  const savePasswordReset = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedUser) return;
+    resetUserPassword.mutate({ id: selectedUser.id, data: { password: resetPassword } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        setModal(null);
+        setSelectedUser(null);
+        setResetPassword('');
+        toast({ title: 'Member password reset', description: `Share the temporary password privately with ${selectedUser.phone}.` });
+      },
+    });
+  };
   const saveUserWallet = (event: FormEvent) => {
     event.preventDefault();
     if (!selectedUser) return;
@@ -672,7 +689,7 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   };
   let view: ReactNode;
   if (active === 'analytics') view = <AdminListPage eyebrow="Platform analytics" title="Analytics." copy="A quick read on balances, deposits, withdrawals, and platform activity." loading={dashboard.isLoading} error={!!dashboard.error}><AdminAnalytics dashboard={dashboard.data} /></AdminListPage>;
-  else if (active === 'users') view = <AdminListPage eyebrow="Member directory" title="Users." copy="Credit, debit, ban, or delete member accounts." loading={users.isLoading} error={!!users.error} empty={!users.data?.length}><AdminUsers users={users.data || []} onCredit={user => openUserWallet(user, 'credit')} onDebit={user => openUserWallet(user, 'debit')} onToggleBan={toggleBan} onDelete={removeUser} /></AdminListPage>;
+  else if (active === 'users') view = <AdminListPage eyebrow="Member directory" title="Users." copy="Reset passwords, credit, debit, ban, or delete member accounts." loading={users.isLoading} error={!!users.error} empty={!users.data?.length}><AdminUsers users={users.data || []} onCredit={user => openUserWallet(user, 'credit')} onDebit={user => openUserWallet(user, 'debit')} onToggleBan={toggleBan} onDelete={removeUser} onResetPassword={openPasswordReset} /></AdminListPage>;
   else if (active === 'deposits') view = <AdminListPage eyebrow="Manual payment review" title="Payments." copy="Confirm each transfer in the MTN or Airtel payment record before approving it. Approved deposits are credited to product funds only." loading={payments.isLoading} error={!!payments.error} empty={!payments.data?.length}><AdminPayments payments={payments.data || []} onReview={reviewDeposit} reviewing={reviewPayment.isPending} error={!!reviewPayment.error} /></AdminListPage>;
   else if (active === 'withdrawals') view = <AdminListPage eyebrow="Manual payout queue" title="Withdrawals." copy="Review member requests and confirm payments outside this system." loading={withdrawals.isLoading} error={!!withdrawals.error} empty={!withdrawals.data?.length}><AdminWithdrawals withdrawals={withdrawals.data || []} onReview={approveWithdrawal} /></AdminListPage>;
   else if (active === 'products') view = <AdminListPage eyebrow="Earning catalogue" title="Products." copy="Set the fixed earning plans available to members." action={<Button data-testid="button-new-product" onClick={() => setModal('product')}><Plus className="size-4" /> New product</Button>} loading={products.isLoading} error={!!products.error} empty={!products.data?.length}><AdminProducts products={products.data || []} onDelete={(id) => deleteProduct.mutate({ id }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'Product removed' }); } })} /></AdminListPage>;
@@ -685,7 +702,7 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   else if (active === 'activity') view = <AdminListPage eyebrow="Audit trail" title="Activity." copy="Recent actions across the Grand Crown console." loading={activity.isLoading} error={!!activity.error} empty={!activity.data?.length}><AdminActivity activity={activity.data || []} /></AdminListPage>;
   else if (active === 'settings') view = <AdminListPage eyebrow="Configuration" title="Settings." copy="Edit every member-facing rate, limit, payment instruction, access control, and announcement." loading={settings.isLoading} error={!!settings.error}>{settings.data && <AdminSettingsEditor settings={settings.data} onSave={saveSettings} pending={updateSettings.isPending} error={!!updateSettings.error} />}</AdminListPage>;
   else view = <AdminOverview dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} onReview={() => setActive('deposits')} />;
-  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{(modal === 'credit' || modal === 'debit') && selectedUser && <AdminUserWalletModal action={modal} user={selectedUser} amount={userAmount} note={userNote} setAmount={setUserAmount} setNote={setUserNote} onClose={() => { setModal(null); setSelectedUser(null); }} onSubmit={saveUserWallet} pending={creditUser.isPending || debitUser.isPending} error={!!creditUser.error || !!debitUser.error} />}</>;
+  return <>{view}{modal === 'product' && <AdminProductModal values={product} setValues={setProduct} onClose={() => setModal(null)} onSubmit={saveProduct} pending={createProduct.isPending} error={!!createProduct.error} />}{(modal === 'credit' || modal === 'debit') && selectedUser && <AdminUserWalletModal action={modal} user={selectedUser} amount={userAmount} note={userNote} setAmount={setUserAmount} setNote={setUserNote} onClose={() => { setModal(null); setSelectedUser(null); }} onSubmit={saveUserWallet} pending={creditUser.isPending || debitUser.isPending} error={!!creditUser.error || !!debitUser.error} />}{modal === 'reset-password' && selectedUser && <AdminResetPasswordModal user={selectedUser} password={resetPassword} setPassword={setResetPassword} onClose={() => { setModal(null); setSelectedUser(null); setResetPassword(''); }} onSubmit={savePasswordReset} pending={resetUserPassword.isPending} error={!!resetUserPassword.error} />}</>;
 }
 
 function AdminListPage({ eyebrow, title, copy, action, loading, error, empty, children }: { eyebrow: string; title: string; copy: string; action?: ReactNode; loading: boolean; error: boolean; empty?: boolean; children: ReactNode }) {
@@ -802,14 +819,25 @@ function AdminOverview({ dashboard, loading, error, onReview }: { dashboard?: an
   </div>;
 }
 
-function AdminUsers({ users, onCredit, onDebit, onToggleBan, onDelete }: { users: any[]; onCredit: (user: any) => void; onDebit: (user: any) => void; onToggleBan: (user: any) => void; onDelete: (user: any) => void }) {
+function AdminUsers({ users, onCredit, onDebit, onToggleBan, onDelete, onResetPassword }: { users: any[]; onCredit: (user: any) => void; onDebit: (user: any) => void; onToggleBan: (user: any) => void; onDelete: (user: any) => void; onResetPassword: (user: any) => void }) {
   return <div className="overflow-hidden rounded-3xl border border-border bg-card">{users.map(user => <div key={user.id} data-testid={`row-admin-user-${user.id}`} className="flex flex-col gap-4 border-b border-border p-5 last:border-0 sm:px-6">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex items-center gap-3"><div className={`grid size-10 place-items-center rounded-full font-mono text-xs ${user.banned ? 'bg-red-100 text-red-700' : 'bg-accent/20 text-accent-foreground'}`}>{user.phone.slice(-2)}</div><div><div className="flex flex-wrap items-center gap-2 font-semibold"><span>{user.phone}</span>{user.banned && <span className="rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-red-700">Banned</span>}</div><div className="text-xs text-muted-foreground">Joined {shortDate(user.createdAt)} · Ref {user.referralCode}</div></div></div>
       <div className="flex flex-wrap items-center gap-5 text-right"><div><div className="text-xs text-muted-foreground">Withdrawable</div><div className="font-mono text-sm">{money(user.wallet)}</div></div><div><div className="text-xs text-muted-foreground">Product funds</div><div className="font-mono text-sm">{money(user.depositBalance)}</div></div><div><div className="text-xs text-muted-foreground">Earned</div><div className="font-mono text-sm text-accent-foreground">{money(user.totalEarned)}</div></div></div>
     </div>
-    <div className="flex flex-wrap gap-2 border-t border-border/70 pt-3"><Button data-testid={`button-credit-user-${user.id}`} onClick={() => onCredit(user)} className="min-h-9 bg-emerald-600 px-3 text-xs text-white shadow-none hover:bg-emerald-700"><Plus className="size-3.5" /> Credit</Button><Button data-testid={`button-debit-user-${user.id}`} onClick={() => onDebit(user)} variant="outline" className="min-h-9 px-3 text-xs"><Minus className="size-3.5" /> Debit</Button><Button data-testid={`button-ban-user-${user.id}`} onClick={() => onToggleBan(user)} variant="outline" className="min-h-9 px-3 text-xs"><Ban className="size-3.5" /> {user.banned ? 'Unban' : 'Ban'}</Button><Button data-testid={`button-delete-user-${user.id}`} onClick={() => onDelete(user)} variant="danger" className="min-h-9 px-3 text-xs"><UserX className="size-3.5" /> Delete</Button></div>
+     <div className="flex flex-wrap gap-2 border-t border-border/70 pt-3"><Button data-testid={`button-reset-password-user-${user.id}`} onClick={() => onResetPassword(user)} variant="outline" className="min-h-9 px-3 text-xs"><KeyRound className="size-3.5" /> Reset password</Button><Button data-testid={`button-credit-user-${user.id}`} onClick={() => onCredit(user)} className="min-h-9 bg-emerald-600 px-3 text-xs text-white shadow-none hover:bg-emerald-700"><Plus className="size-3.5" /> Credit</Button><Button data-testid={`button-debit-user-${user.id}`} onClick={() => onDebit(user)} variant="outline" className="min-h-9 px-3 text-xs"><Minus className="size-3.5" /> Debit</Button><Button data-testid={`button-ban-user-${user.id}`} onClick={() => onToggleBan(user)} variant="outline" className="min-h-9 px-3 text-xs"><Ban className="size-3.5" /> {user.banned ? 'Unban' : 'Ban'}</Button><Button data-testid={`button-delete-user-${user.id}`} onClick={() => onDelete(user)} variant="danger" className="min-h-9 px-3 text-xs"><UserX className="size-3.5" /> Delete</Button></div>
   </div>)}</div>;
+}
+
+function AdminResetPasswordModal({ user, password, setPassword, onClose, onSubmit, pending, error }: { user: any; password: string; setPassword: (value: string) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error: boolean }) {
+  return <Modal title={`Reset password · ${user.phone}`} onClose={onClose}>
+    <p className="text-sm leading-6 text-muted-foreground">Set a temporary password for this member. Share it directly through a trusted private channel; the member can change it from Account after signing in.</p>
+    <form onSubmit={onSubmit} className="mt-5 space-y-4">
+      <Field label="Temporary password" data-testid="input-reset-member-password" type="password" autoComplete="new-password" minLength={8} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} required />
+      {error && <p role="alert" className="text-sm text-destructive">The password could not be reset. Use 8–128 characters and try again.</p>}
+      <Button data-testid="button-submit-member-password-reset" type="submit" className="w-full" disabled={pending}>{pending ? 'Resetting…' : 'Reset member password'}<KeyRound className="size-4" /></Button>
+    </form>
+  </Modal>;
 }
 
 function AdminAnalytics({ dashboard }: { dashboard?: any }) {
