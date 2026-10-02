@@ -679,7 +679,9 @@ router.use(async (_req, res, next) => {
     res.once("close", releaseLocal);
     return next();
   }
-  let client: import("pg").PoolClient | undefined;
+  let client:
+    | { query: (text: string) => Promise<unknown>; release: (destroy?: boolean) => void }
+    | undefined;
   try {
     const { pool } = await getDatabase();
     client = await pool.connect();
