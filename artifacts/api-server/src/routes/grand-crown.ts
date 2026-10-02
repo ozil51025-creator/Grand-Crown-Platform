@@ -65,6 +65,7 @@ type Payment = {
   payerPhone: string;
   transactionId: string;
   providerTransactionId?: string;
+  providerRequestStartedAt?: string;
   status: "pending" | "completed" | "failed" | "expired" | "approved" | "rejected";
   createdAt: string;
   settledAt?: string;
@@ -676,7 +677,7 @@ function applyVerifiedProviderTransaction(
     transaction.reference !== payment.transactionId ||
     Number(transaction.amount) !== payment.amount ||
     transaction.currency !== "UGX" ||
-    (transaction.provider && transaction.provider.toLowerCase() !== expectedProvider) ||
+    (typeof transaction.provider !== "string" || transaction.provider.toLowerCase() !== expectedProvider) ||
     (transaction.type && transaction.type.toUpperCase() !== "COLLECTION") ||
     (payment.providerTransactionId && transaction.transactionId !== payment.providerTransactionId)
   ) {
@@ -949,6 +950,13 @@ router.get("/payments/:id", async (req, res): Promise<void> => {
   }
 
   if (payment.status === "pending") {
+    if (!payment.providerRequestStartedAt) {
+      payment.status = "failed";
+      data.activity.push({ id: id("ACT"), userId: payment.userId, type: "legacy_deposit_closed", createdAt: now() });
+      writeData(data);
+      res.json(payment);
+      return;
+    }
     const provider = paymentProvider(payment.method);
     if (!provider) {
       res.status(409).json({ error: "Payment uses an unsupported provider" });
@@ -1072,6 +1080,7 @@ router.post("/payments", async (req, res): Promise<void> => {
     method,
     payerPhone,
     transactionId,
+    providerRequestStartedAt: now(),
     status: "pending",
     createdAt: now(),
   };
@@ -1334,7 +1343,7 @@ router.get("/admin/dashboard", (req, res) => {
     transactions: data.transactions.length,
     walletBalances: data.users.reduce((sum, user) => sum + user.wallet, 0),
     productFundBalances: data.users.reduce((sum, user) => sum + user.depositBalance, 0),
-    totalDeposited: data.payments.filter((item) => item.status === "completed" || item.status === "approved").reduce((sum, item) => sum + item.amount, 0),
+    totalDeposited: data.payments.filter((item) => item.status === "completed").reduce((sum, item) => sum + item.amount, 0),
     totalWithdrawn: data.withdrawals.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0),
     totalInvested: data.purchases.reduce((sum, item) => sum + item.amount, 0),
   });
