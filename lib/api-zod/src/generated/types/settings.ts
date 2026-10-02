@@ -22,8 +22,6 @@ export interface Settings {
   checkinBonus: number;
   withdrawalFeePercent: number;
   l1CommissionPercent: number;
-  l2CommissionPercent: number;
-  l3CommissionPercent: number;
   returnMultiple: number;
   cycleDays: number;
   maxWithdrawalsPerUserPerDay: number;

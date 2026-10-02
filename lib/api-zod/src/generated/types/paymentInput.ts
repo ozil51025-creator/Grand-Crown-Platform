@@ -11,4 +11,9 @@ export interface PaymentInput {
   amount: number;
   method: string;
   payerPhone: string;
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  payerReference: string;
 }

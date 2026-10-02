@@ -56,16 +56,6 @@ export interface SettingsInput {
      * @minimum 0
      * @maximum 100
      */
-  l2CommissionPercent: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  l3CommissionPercent: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
   returnMultiple: number;
   /**
      * @minimum 1

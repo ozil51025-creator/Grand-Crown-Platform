@@ -15,6 +15,8 @@ export interface Payment {
   transactionId: string;
   /** @nullable */
   providerTransactionId?: string | null;
+  /** @nullable */
+  payerReference?: string | null;
   status: string;
   createdAt: string;
   /** @nullable */

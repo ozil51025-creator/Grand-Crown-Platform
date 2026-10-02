@@ -442,23 +442,28 @@ function PurchasesView({ purchases, loading, error, currency, onBrowse }: { purc
 
 function ReferralView({ referrals, loading, error, currency }: { referrals?: any; loading: boolean; error: boolean; currency: string }) {
   const { toast } = useToast();
-  const [level, setLevel] = useState<'all' | '1' | '2' | '3'>('all');
   const members = referrals?.members || [];
-  const counts = {
-    all: referrals?.teamSize || members.length,
-    '1': members.filter((member: any) => member.level === 1).length,
-    '2': members.filter((member: any) => member.level === 2).length,
-    '3': members.filter((member: any) => member.level === 3).length,
-  };
-  const filteredMembers = level === 'all' ? members : members.filter((member: any) => String(member.level) === level);
   const copy = () => { if (referrals?.link) navigator.clipboard?.writeText(referrals.link); toast({ title: 'Referral link copied', description: 'Share it with someone who values a steadier pace.' }); };
-  const filters = [
-    { id: 'all' as const, label: 'Total members' },
-    { id: '1' as const, label: 'Level 1' },
-    { id: '2' as const, label: 'Level 2' },
-    { id: '3' as const, label: 'Level 3' },
-  ];
-  return <div className="animate-rise"><PageHeading eyebrow="Your circle" title="Grow together." copy="Invite people you trust and earn referral commissions as your circle becomes active." /><QueryState loading={loading} error={error}><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{filters.map(filter => <button data-testid={`button-referral-level-${filter.id}`} key={filter.id} type="button" onClick={() => setLevel(filter.id)} className={`rounded-2xl border p-4 text-left transition sm:p-5 ${level === filter.id ? 'border-accent bg-accent/10 shadow-sm' : 'border-border bg-card hover:border-accent/50'}`}><div className="text-2xl font-semibold tracking-tight">{counts[filter.id]}</div><div className="mt-1 text-xs font-semibold text-muted-foreground">{filter.label}</div></button>)}</div><div className="mt-5 grid gap-5 md:grid-cols-2"><Metric label="Direct referrals" value={String(referrals?.directReferrals || 0)} icon={UserRound} /><Metric label="Commissions" value={money((referrals?.commissions || []).reduce((sum: number, item: any) => sum + item.amount, 0), currency)} icon={Gift} accent /></div><div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]"><div className="rounded-3xl bg-primary p-7 text-primary-foreground"><div className="flex items-center gap-2 text-accent"><Link2 className="size-4" /><span className="font-mono text-[10px] uppercase tracking-[.18em]">Your invite link</span></div><div className="mt-6 break-all font-mono text-sm text-primary-foreground/80">{referrals?.link || 'Your referral link will appear here.'}</div><Button data-testid="button-copy-referral" onClick={copy} className="mt-7 bg-accent text-primary hover:bg-accent/90"><Copy className="size-4" /> Copy link</Button></div><div className="rounded-3xl border border-border bg-card p-7"><div className="flex items-center justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Members</h2><p className="mt-1 text-sm text-muted-foreground">{level === 'all' ? 'Everyone in your referral circle.' : `People in level ${level}.`}</p></div><Users className="size-5 text-accent-foreground" /></div><div className="mt-5 space-y-3">{filteredMembers.length ? filteredMembers.slice(0, 10).map((member: any) => <div key={member.id} data-testid={`row-referral-${member.id}`} className="flex items-center justify-between rounded-2xl bg-secondary/60 p-3"><div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-full bg-accent/20 font-mono text-xs text-accent-foreground">{member.phone.slice(-2)}</div><div><div className="text-sm font-semibold">{member.phone}</div><div className="text-xs text-muted-foreground">Level {member.level} · {shortDate(member.createdAt)}</div></div></div><ChevronRight className="size-4 text-muted-foreground" /></div>) : <Empty icon={Users} title="No members in this level" copy="Share your invite link to grow this part of your circle." />}</div></div></div></QueryState></div>;
+  return <div className="animate-rise">
+    <PageHeading eyebrow="Your circle" title="Grow together." copy="Earn a 10% Level 1 commission when a direct referral purchases a product." />
+    <QueryState loading={loading} error={error}>
+      <div className="grid gap-5 md:grid-cols-2">
+        <Metric label="Direct referrals · Level 1" value={String(referrals?.directReferrals || 0)} icon={UserRound} />
+        <Metric label="Referral commissions" value={money((referrals?.commissions || []).reduce((sum: number, item: any) => sum + item.amount, 0), currency)} icon={Gift} accent />
+      </div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+        <div className="rounded-3xl bg-primary p-7 text-primary-foreground">
+          <div className="flex items-center gap-2 text-accent"><Link2 className="size-4" /><span className="font-mono text-[10px] uppercase tracking-[.18em]">Your invite link</span></div>
+          <div className="mt-6 break-all font-mono text-sm text-primary-foreground/80">{referrals?.link || 'Your referral link will appear here.'}</div>
+          <Button data-testid="button-copy-referral" onClick={copy} className="mt-7 bg-accent text-primary hover:bg-accent/90"><Copy className="size-4" /> Copy link</Button>
+        </div>
+        <div className="rounded-3xl border border-border bg-card p-7">
+          <div className="flex items-center justify-between gap-3"><div><h2 className="font-display text-2xl font-semibold">Direct referrals</h2><p className="mt-1 text-sm text-muted-foreground">People who joined with your invite link.</p></div><Users className="size-5 text-accent-foreground" /></div>
+          <div className="mt-5 space-y-3">{members.length ? members.slice(0, 10).map((member: any) => <div key={member.id} data-testid={`row-referral-${member.id}`} className="flex items-center justify-between rounded-2xl bg-secondary/60 p-3"><div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-full bg-accent/20 font-mono text-xs text-accent-foreground">{member.phone.slice(-2)}</div><div><div className="text-sm font-semibold">{member.phone}</div><div className="text-xs text-muted-foreground">Level 1 · {shortDate(member.createdAt)}</div></div></div><ChevronRight className="size-4 text-muted-foreground" /></div>) : <Empty icon={Users} title="No direct referrals yet" copy="Share your invite link to earn Level 1 commissions." />}</div>
+        </div>
+      </div>
+    </QueryState>
+  </div>;
 }
 
 function ActivityTable({ transactions, currency }: { transactions: any[]; currency: string }) {

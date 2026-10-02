@@ -89,8 +89,6 @@ export interface Settings {
   checkinBonus: number;
   withdrawalFeePercent: number;
   l1CommissionPercent: number;
-  l2CommissionPercent: number;
-  l3CommissionPercent: number;
   returnMultiple: number;
   cycleDays: number;
   maxWithdrawalsPerUserPerDay: number;
@@ -126,8 +124,6 @@ export interface PublicSettings {
   checkinBonus: number;
   withdrawalFeePercent: number;
   l1CommissionPercent: number;
-  l2CommissionPercent: number;
-  l3CommissionPercent: number;
   returnMultiple: number;
   cycleDays: number;
   maxWithdrawalsPerUserPerDay: number;
@@ -192,16 +188,6 @@ export interface SettingsInput {
      * @maximum 100
      */
   l1CommissionPercent: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  l2CommissionPercent: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  l3CommissionPercent: number;
   /**
      * @minimum 0
      * @maximum 100
@@ -418,6 +404,8 @@ export interface Payment {
   transactionId: string;
   /** @nullable */
   providerTransactionId?: string | null;
+  /** @nullable */
+  payerReference?: string | null;
   status: string;
   createdAt: string;
   /** @nullable */
@@ -431,6 +419,11 @@ export interface PaymentInput {
   amount: number;
   method: string;
   payerPhone: string;
+  /**
+     * @minLength 3
+     * @maxLength 80
+     */
+  payerReference: string;
 }
 
 export interface PaymentResponse {

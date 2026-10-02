@@ -33,8 +33,6 @@ export const GetSettingsResponse = zod.object({
   "checkinBonus": zod.number(),
   "withdrawalFeePercent": zod.number(),
   "l1CommissionPercent": zod.number(),
-  "l2CommissionPercent": zod.number(),
-  "l3CommissionPercent": zod.number(),
   "returnMultiple": zod.number(),
   "cycleDays": zod.number().int(),
   "maxWithdrawalsPerUserPerDay": zod.number().int(),
@@ -216,6 +214,7 @@ export const GetPaymentsResponseItem = zod.object({
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
   "providerTransactionId": zod.string().nullish(),
+  "payerReference": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
   "reviewedAt": zod.string().nullish(),
@@ -225,12 +224,16 @@ export const GetPaymentsResponse = zod.array(GetPaymentsResponseItem)
 
 
 
+export const submitPaymentBodyPayerReferenceMin = 3;
+export const submitPaymentBodyPayerReferenceMax = 80;
+
 
 
 export const SubmitPaymentBody = zod.object({
   "amount": zod.number().min(1),
   "method": zod.string(),
-  "payerPhone": zod.string()
+  "payerPhone": zod.string(),
+  "payerReference": zod.string().min(submitPaymentBodyPayerReferenceMin).max(submitPaymentBodyPayerReferenceMax)
 })
 
 export const SubmitPaymentResponse = zod.object({
@@ -245,6 +248,7 @@ export const SubmitPaymentResponse = zod.object({
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
   "providerTransactionId": zod.string().nullish(),
+  "payerReference": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
   "reviewedAt": zod.string().nullish(),
@@ -265,6 +269,7 @@ export const GetPaymentResponse = zod.object({
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
   "providerTransactionId": zod.string().nullish(),
+  "payerReference": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
   "reviewedAt": zod.string().nullish(),
@@ -535,12 +540,42 @@ export const GetAdminPaymentsResponseItem = zod.object({
   "payerPhone": zod.string(),
   "transactionId": zod.string(),
   "providerTransactionId": zod.string().nullish(),
+  "payerReference": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.string(),
   "reviewedAt": zod.string().nullish(),
   "settledAt": zod.string().nullish()
 })
 export const GetAdminPaymentsResponse = zod.array(GetAdminPaymentsResponseItem)
+
+
+export const ReviewPaymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ReviewPaymentBody = zod.object({
+  "action": zod.enum(['approve', 'reject'])
+})
+
+export const ReviewPaymentResponse = zod.object({
+  "ok": zod.boolean(),
+  "paymentId": zod.string().optional(),
+  "status": zod.string().optional(),
+  "payment": zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "amount": zod.number(),
+  "method": zod.string(),
+  "payerPhone": zod.string(),
+  "transactionId": zod.string(),
+  "providerTransactionId": zod.string().nullish(),
+  "payerReference": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "reviewedAt": zod.string().nullish(),
+  "settledAt": zod.string().nullish()
+}).optional()
+})
 
 
 export const GetAdminWithdrawalsResponseItem = zod.object({
@@ -671,8 +706,6 @@ export const GetAdminSettingsResponse = zod.object({
   "checkinBonus": zod.number(),
   "withdrawalFeePercent": zod.number(),
   "l1CommissionPercent": zod.number(),
-  "l2CommissionPercent": zod.number(),
-  "l3CommissionPercent": zod.number(),
   "returnMultiple": zod.number(),
   "cycleDays": zod.number().int(),
   "maxWithdrawalsPerUserPerDay": zod.number().int(),
@@ -716,12 +749,6 @@ export const updateAdminSettingsBodyWithdrawalFeePercentMax = 100;
 export const updateAdminSettingsBodyL1CommissionPercentMin = 0;
 export const updateAdminSettingsBodyL1CommissionPercentMax = 100;
 
-export const updateAdminSettingsBodyL2CommissionPercentMin = 0;
-export const updateAdminSettingsBodyL2CommissionPercentMax = 100;
-
-export const updateAdminSettingsBodyL3CommissionPercentMin = 0;
-export const updateAdminSettingsBodyL3CommissionPercentMax = 100;
-
 export const updateAdminSettingsBodyReturnMultipleMin = 0;
 export const updateAdminSettingsBodyReturnMultipleMax = 100;
 
@@ -760,8 +787,6 @@ export const UpdateAdminSettingsBody = zod.object({
   "checkinBonus": zod.number().min(updateAdminSettingsBodyCheckinBonusMin).max(updateAdminSettingsBodyCheckinBonusMax),
   "withdrawalFeePercent": zod.number().min(updateAdminSettingsBodyWithdrawalFeePercentMin).max(updateAdminSettingsBodyWithdrawalFeePercentMax),
   "l1CommissionPercent": zod.number().min(updateAdminSettingsBodyL1CommissionPercentMin).max(updateAdminSettingsBodyL1CommissionPercentMax),
-  "l2CommissionPercent": zod.number().min(updateAdminSettingsBodyL2CommissionPercentMin).max(updateAdminSettingsBodyL2CommissionPercentMax),
-  "l3CommissionPercent": zod.number().min(updateAdminSettingsBodyL3CommissionPercentMin).max(updateAdminSettingsBodyL3CommissionPercentMax),
   "returnMultiple": zod.number().min(updateAdminSettingsBodyReturnMultipleMin).max(updateAdminSettingsBodyReturnMultipleMax),
   "cycleDays": zod.number().int().min(1).max(updateAdminSettingsBodyCycleDaysMax),
   "maxWithdrawalsPerUserPerDay": zod.number().int().min(updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMin).max(updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMax),
@@ -796,8 +821,6 @@ export const UpdateAdminSettingsResponse = zod.object({
   "checkinBonus": zod.number(),
   "withdrawalFeePercent": zod.number(),
   "l1CommissionPercent": zod.number(),
-  "l2CommissionPercent": zod.number(),
-  "l3CommissionPercent": zod.number(),
   "returnMultiple": zod.number(),
   "cycleDays": zod.number().int(),
   "maxWithdrawalsPerUserPerDay": zod.number().int(),
