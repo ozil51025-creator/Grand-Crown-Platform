@@ -36,6 +36,7 @@ export * from './product';
 export * from './productInput';
 export * from './publicSettings';
 export * from './purchase';
+export * from './purchaseInput';
 export * from './referralMember';
 export * from './referralOverview';
 export * from './registerInput';

@@ -8,6 +8,8 @@
 
 export interface Purchase {
   id: string;
+  /** @nullable */
+  paymentId?: string | null;
   userId: string;
   productId: string;
   productName: string;

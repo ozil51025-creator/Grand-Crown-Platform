@@ -83,6 +83,7 @@ export const RegisterUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -103,6 +104,7 @@ export const LoginUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -123,6 +125,7 @@ export const GetCurrentUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -140,6 +143,7 @@ export const GetDashboardResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -147,6 +151,7 @@ export const GetDashboardResponse = zod.object({
 }),
   "purchases": zod.array(zod.object({
   "id": zod.string(),
+  "paymentId": zod.string().nullish(),
   "userId": zod.string(),
   "productId": zod.string(),
   "productName": zod.string(),
@@ -174,6 +179,7 @@ export const ClaimCheckinResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -205,8 +211,6 @@ export const GetReferralResponse = zod.object({
 export const GetPaymentsResponseItem = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
-  "productId": zod.string(),
-  "productName": zod.string(),
   "amount": zod.number(),
   "method": zod.string(),
   "payerPhone": zod.string(),
@@ -220,8 +224,11 @@ export const GetPaymentsResponseItem = zod.object({
 export const GetPaymentsResponse = zod.array(GetPaymentsResponseItem)
 
 
+
+
+
 export const SubmitPaymentBody = zod.object({
-  "productId": zod.string(),
+  "amount": zod.number().min(1),
   "method": zod.string(),
   "payerPhone": zod.string()
 })
@@ -233,8 +240,6 @@ export const SubmitPaymentResponse = zod.object({
   "payment": zod.object({
   "id": zod.string(),
   "userId": zod.string(),
-  "productId": zod.string(),
-  "productName": zod.string(),
   "amount": zod.number(),
   "method": zod.string(),
   "payerPhone": zod.string(),
@@ -255,8 +260,6 @@ export const GetPaymentParams = zod.object({
 export const GetPaymentResponse = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
-  "productId": zod.string(),
-  "productName": zod.string(),
   "amount": zod.number(),
   "method": zod.string(),
   "payerPhone": zod.string(),
@@ -271,6 +274,7 @@ export const GetPaymentResponse = zod.object({
 
 export const GetPurchasesResponseItem = zod.object({
   "id": zod.string(),
+  "paymentId": zod.string().nullish(),
   "userId": zod.string(),
   "productId": zod.string(),
   "productName": zod.string(),
@@ -280,6 +284,23 @@ export const GetPurchasesResponseItem = zod.object({
   "earningsCredited": zod.number().int().optional()
 })
 export const GetPurchasesResponse = zod.array(GetPurchasesResponseItem)
+
+
+export const BuyProductBody = zod.object({
+  "productId": zod.string()
+})
+
+export const BuyProductResponse = zod.object({
+  "id": zod.string(),
+  "paymentId": zod.string().nullish(),
+  "userId": zod.string(),
+  "productId": zod.string(),
+  "productName": zod.string(),
+  "amount": zod.number(),
+  "status": zod.string(),
+  "purchasedAt": zod.string(),
+  "earningsCredited": zod.number().int().optional()
+})
 
 
 export const GetWithdrawalsResponseItem = zod.object({
@@ -403,6 +424,7 @@ export const GetAdminUsersResponseItem = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -432,6 +454,7 @@ export const CreditUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -461,6 +484,7 @@ export const DebitUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -484,6 +508,7 @@ export const BanUserResponse = zod.object({
   "phone": zod.string(),
   "referralCode": zod.string(),
   "wallet": zod.number(),
+  "depositBalance": zod.number(),
   "totalEarned": zod.number(),
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
@@ -504,8 +529,6 @@ export const DeleteUserResponse = zod.object({
 export const GetAdminPaymentsResponseItem = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
-  "productId": zod.string(),
-  "productName": zod.string(),
   "amount": zod.number(),
   "method": zod.string(),
   "payerPhone": zod.string(),

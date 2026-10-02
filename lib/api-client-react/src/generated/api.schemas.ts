@@ -270,6 +270,7 @@ export interface User {
   phone: string;
   referralCode: string;
   wallet: number;
+  depositBalance: number;
   totalEarned: number;
   createdAt: string;
   /** @nullable */
@@ -377,6 +378,8 @@ export interface UserActionResponse {
 
 export interface Purchase {
   id: string;
+  /** @nullable */
+  paymentId?: string | null;
   userId: string;
   productId: string;
   productName: string;
@@ -384,6 +387,10 @@ export interface Purchase {
   status: string;
   purchasedAt: string;
   earningsCredited?: number;
+}
+
+export interface PurchaseInput {
+  productId: string;
 }
 
 export interface Transaction {
@@ -405,8 +412,6 @@ export interface Activity {
 export interface Payment {
   id: string;
   userId: string;
-  productId: string;
-  productName: string;
   amount: number;
   method: string;
   payerPhone: string;
@@ -422,7 +427,8 @@ export interface Payment {
 }
 
 export interface PaymentInput {
-  productId: string;
+  /** @minimum 1 */
+  amount: number;
   method: string;
   payerPhone: string;
 }

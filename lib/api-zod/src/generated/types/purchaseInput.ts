@@ -6,9 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PaymentInput {
-  /** @minimum 1 */
-  amount: number;
-  method: string;
-  payerPhone: string;
+export interface PurchaseInput {
+  productId: string;
 }

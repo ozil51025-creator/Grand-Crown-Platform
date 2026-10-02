@@ -9,8 +9,6 @@
 export interface Payment {
   id: string;
   userId: string;
-  productId: string;
-  productName: string;
   amount: number;
   method: string;
   payerPhone: string;

@@ -11,6 +11,7 @@ export interface User {
   phone: string;
   referralCode: string;
   wallet: number;
+  depositBalance: number;
   totalEarned: number;
   createdAt: string;
   /** @nullable */
