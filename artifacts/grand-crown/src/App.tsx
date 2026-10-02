@@ -672,7 +672,7 @@ function AdminSettingsEditor({ settings, onSave, pending, error }: { settings: S
   const numberField = (key: Parameters<typeof updateNumber>[0], label: string, min = 0, max?: number, step = 1, hint?: string) => <div className="space-y-1.5"><Field label={label} type="number" min={min} max={max} step={step} value={values[key]} onChange={event => updateNumber(key, event.target.value)} />{hint && <p className="text-xs text-slate-500">{hint}</p>}</div>;
   const toggle = (key: Parameters<typeof updateToggle>[0], title: string, description: string) => <AdminSettingsToggle title={title} description={description} checked={values[key]} onChange={checked => updateToggle(key, checked)} />;
   return <form onSubmit={save} className="space-y-5" data-testid="form-admin-settings">
-    <AdminSettingsSection title="Brand and payment details" description="Member-facing identity, support, and manual payment instructions.">
+    <AdminSettingsSection title="Brand and support details" description="Member-facing identity and support details. Online deposits are processed through PesaJet.">
       <Field label="Brand name" data-testid="input-settings-brand" maxLength={80} value={values.brand} onChange={event => updateText('brand', event.target.value)} required />
       <Field label="Currency code" data-testid="input-settings-currency" maxLength={8} value={values.currency} onChange={event => updateText('currency', event.target.value.toUpperCase())} required />
       <Field label="MTN Mobile Money number" data-testid="input-settings-mtn" value={values.mtnNumber} onChange={event => updateText('mtnNumber', event.target.value)} />
@@ -724,7 +724,8 @@ function AdminOverview({ dashboard, loading, error, onReview }: { dashboard?: an
     ['Total users', dashboard?.users || 0, false],
     ['Active users', dashboard?.users || 0, false],
     ['Banned users', 0, false],
-    ['Wallet balances', money(dashboard?.walletBalances), true],
+    ['Withdrawable balances', money(dashboard?.walletBalances), true],
+    ['Product funds', money(dashboard?.productFundBalances), true],
     ['Total deposited', money(dashboard?.totalDeposited), true],
     ['Total withdrawn', money(dashboard?.totalWithdrawn), true],
     ['Total invested', money(dashboard?.totalInvested), true],
