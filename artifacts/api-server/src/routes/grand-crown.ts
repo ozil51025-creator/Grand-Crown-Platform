@@ -1047,11 +1047,9 @@ router.post("/payments", async (req, res): Promise<void> => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
-  const productId = bodyString(req, "productId");
+  const amount = bodyNumber(req, "amount");
   const method = bodyString(req, "method");
   const payerPhone = bodyString(req, "payerPhone");
-  const product = data.products.find((item) => item.id === productId);
-  if (!product) return res.status(404).json({ error: "Product not found" });
   const provider = paymentProvider(method);
   if (!provider) return void res.status(400).json({ error: "Choose a valid payment method" });
   if (!normalizeUgandaPhone(payerPhone)) {
@@ -1063,16 +1061,14 @@ router.post("/payments", async (req, res): Promise<void> => {
   if (!process.env["PESAJET_API_KEY"]) {
     return void res.status(503).json({ error: "Mobile-money payments are not configured yet" });
   }
-  if (product.price < data.settings.minDeposit) {
+  if (!Number.isSafeInteger(amount) || amount < data.settings.minDeposit) {
     return res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
   }
   const transactionId = `GC-${crypto.randomBytes(12).toString("hex").toUpperCase()}`;
   const payment: Payment = {
     id: id("PAY"),
     userId: user.id,
-    productId,
-    productName: product.name,
-    amount: product.price,
+    amount,
     method,
     payerPhone,
     transactionId,
@@ -1080,7 +1076,7 @@ router.post("/payments", async (req, res): Promise<void> => {
     createdAt: now(),
   };
   data.payments.push(payment);
-  data.activity.push({ id: id("ACT"), userId: user.id, type: "payment_initiated", createdAt: now() });
+  data.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_initiated", createdAt: now() });
   writeData(data);
 
   try {
@@ -1099,7 +1095,7 @@ router.post("/payments", async (req, res): Promise<void> => {
     const latestPayment = latestData.payments.find((item) => item.id === payment.id);
     if (error instanceof PesaJetRequestError && error.statusCode && error.statusCode >= 400 && error.statusCode < 500 && latestPayment?.status === "pending") {
       latestPayment.status = "failed";
-      latestData.activity.push({ id: id("ACT"), userId: user.id, type: "payment_failed", createdAt: now() });
+      latestData.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_failed", createdAt: now() });
       writeData(latestData);
     }
     req.log.warn(
@@ -1116,6 +1112,38 @@ router.get("/purchases", (req, res) => {
   const user = requireUser(req, res, data);
   if (!user) return;
   return res.json(data.purchases.filter((purchase) => purchase.userId === user.id));
+});
+
+router.post("/purchases", (req, res) => {
+  const data = readData();
+  const user = requireUser(req, res, data);
+  if (!user) return;
+  const productId = bodyString(req, "productId");
+  const product = data.products.find((item) => item.id === productId);
+  if (!product) return res.status(404).json({ error: "Product not found" });
+  if (user.depositBalance < product.price) {
+    return res.status(400).json({
+      error: `Not enough product funds. Deposit ${money(product.price - user.depositBalance, data.settings.currency)} more.`,
+    });
+  }
+
+  user.depositBalance -= product.price;
+  const purchase: Purchase = {
+    id: id("PUR"),
+    userId: user.id,
+    productId: product.id,
+    productName: product.name,
+    amount: product.price,
+    status: "active",
+    purchasedAt: now(),
+    earningsCredited: 0,
+  };
+  data.purchases.push(purchase);
+  addTransaction(data, user.id, "product_purchase", -product.price, { purchaseId: purchase.id });
+  applyReferralCommissions(data, user, purchase);
+  data.activity.push({ id: id("ACT"), userId: user.id, type: "product_purchased", createdAt: now() });
+  writeData(data);
+  return res.status(201).json(purchase);
 });
 
 router.get("/withdrawals", (req, res) => {
