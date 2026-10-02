@@ -340,8 +340,50 @@ function Metric({ label, value, icon: Icon, accent = false }: { label: string; v
   return <div className={`rounded-2xl border p-5 ${accent ? 'border-accent/50 bg-accent/10' : 'border-border bg-card'}`}><div className="flex items-start justify-between"><span className="text-xs font-semibold text-muted-foreground">{label}</span><Icon className={`size-4 ${accent ? 'text-accent-foreground' : 'text-muted-foreground'}`} /></div><div className="mt-5 font-display text-2xl font-semibold tracking-tight">{value}</div></div>;
 }
 
-function ProductsView(props: { products?: Product[]; loading: boolean; error: boolean; onBuy: (product: Product) => void; currency: string }) {
-  return <PlanCatalogue {...props} />;
+function ProductsView({ payments, onCheckPayment, ...catalogueProps }: { products?: Product[]; loading: boolean; error: boolean; onBuy: (product: Product) => void; currency: string; payments?: Payment[]; onCheckPayment: (id: string) => void }) {
+  return <div>
+    <div className="mb-5 rounded-2xl border border-accent/30 bg-accent/10 p-4 text-sm leading-6 text-foreground">
+      Mobile-money payments are applied directly to the product you select. They are not withdrawable wallet funds, and the product appears in your account only after PesaJet confirms the payment.
+    </div>
+    <PlanCatalogue {...catalogueProps} />
+    {!!payments?.length && <section className="mt-8 rounded-3xl border border-border bg-card p-5 sm:p-7" aria-labelledby="payment-history-title">
+      <div className="mb-4 flex items-center justify-between gap-3"><div><h2 id="payment-history-title" className="font-display text-2xl font-semibold">Payment activity</h2><p className="mt-1 text-sm text-muted-foreground">Provider-confirmed status for your product payments.</p></div><Receipt className="size-5 text-accent-foreground" /></div>
+      <div className="divide-y divide-border">{payments.slice(0, 8).map(item => <div key={item.id} data-testid={`row-member-payment-${item.id}`} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">{item.productName} <StatusPill status={item.status} /></div><div className="mt-1 text-xs text-muted-foreground">{money(item.amount, catalogueProps.currency)} · {shortDate(item.createdAt)}</div></div>{item.status === 'pending' && <Button data-testid={`button-check-payment-${item.id}`} variant="outline" className="min-h-9 self-start px-3 text-xs sm:self-auto" onClick={() => onCheckPayment(item.id)}>Check status <ArrowUpRight className="size-3.5" /></Button>}</div>)}</div>
+    </section>}
+  </div>;
+}
+
+function PaymentStatusModal({ paymentId, onClose }: { paymentId: string; onClose: () => void }) {
+  const payment = useGetPayment(paymentId, {
+    query: {
+      refetchInterval: query => query.state.data?.status === 'pending' ? 3500 : false,
+      refetchOnWindowFocus: true,
+    },
+  });
+  const { toast } = useToast();
+  useEffect(() => {
+    if (payment.data?.status === 'completed') {
+      queryClient.invalidateQueries();
+      toast({ title: 'Payment confirmed', description: `${payment.data.productName} is now active in your purchases.` });
+    }
+  }, [payment.data?.status]);
+  const status = payment.data?.status;
+  const message = status === 'completed'
+    ? 'PesaJet confirmed your payment. The product is active and now appears in My purchases.'
+    : status === 'failed'
+      ? 'PesaJet could not complete this payment. No product was activated; you can start a new payment attempt.'
+      : status === 'expired'
+        ? 'This payment request expired without confirmation. No product was activated; you can start a new payment attempt.'
+        : 'Waiting for PesaJet to confirm settlement. Check your phone for the mobile-money prompt and enter your PIN only on your handset.';
+  return <Modal title={status === 'completed' ? 'Payment confirmed' : status === 'failed' || status === 'expired' ? 'Payment not completed' : 'Waiting for payment'} onClose={onClose}>
+    <div className="rounded-2xl bg-secondary p-4">
+      <div className="flex items-center justify-between gap-3"><span className="font-semibold">{payment.data?.productName || 'Product payment'}</span><StatusPill status={status || (payment.isError ? 'status unavailable' : 'pending')} /></div>
+      {payment.data && <div className="mt-2 font-mono text-sm">{money(payment.data.amount, 'UGX')}</div>}
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{payment.isError ? 'We could not check the provider right now. This payment remains unconfirmed; we will keep checking while this window stays open.' : message}</p>
+    </div>
+    {status === 'pending' && <p className="mt-4 text-xs leading-5 text-muted-foreground" aria-live="polite">Status refreshes automatically. Do not start another payment for the same request.</p>}
+    <Button data-testid="button-close-payment-status" className="mt-6 w-full" variant="outline" onClick={onClose}>Close</Button>
+  </Modal>;
 }
 
 function PurchasesView({ purchases, loading, error, currency, onBrowse }: { purchases?: any[]; loading: boolean; error: boolean; currency: string; onBrowse: () => void }) {
@@ -378,13 +420,13 @@ function PaymentModal({ product, settings, values, setValues, onClose, onSubmit,
   return <Modal title={`Pay for ${product.name}`} onClose={onClose} wide>
     <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
       <div className="flex items-center justify-between gap-4"><span className="text-sm text-primary-foreground/65">Plan amount</span><span className="font-display text-2xl font-semibold">{money(product.price, settings?.currency)}</span></div>
-      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />PesaJet will send a payment request to your phone. Confirm it with your mobile-money PIN on your handset; never enter or share your PIN here.</div>
+      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />This payment is for the selected product only; it is not withdrawable wallet credit. PesaJet will prompt your phone. Enter your mobile-money PIN only on your handset, never here.</div>
     </div>
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
       <label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Mobile-money network</span><select data-testid="select-payment-method" className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none focus:border-accent" value={values.method} onChange={event => setValues({ ...values, method: event.target.value })}><option>MTN Mobile Money</option><option>Airtel Money</option></select></label>
       <Field label="Phone number to prompt" data-testid="input-payer-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="07xx xxx xxx or +256..." value={values.payerPhone} onChange={event => setValues({ ...values, payerPhone: event.target.value })} required />
       <p className="text-xs leading-5 text-muted-foreground">The amount is set by the plan you selected. A prompt will appear on this phone after you continue.</p>
-      {error && <p role="alert" className="text-sm text-destructive">We could not send the payment request. Check the phone number and try again.</p>}
+      {error && <p role="alert" className="text-sm text-destructive">PesaJet could not create the payment request. Check the number or try again later.</p>}
       <Button data-testid="button-submit-payment" type="submit" className="w-full" disabled={pending}>{pending ? 'Sending phone prompt…' : 'Send payment prompt'}<ArrowUpRight className="size-4" /></Button>
     </form>
   </Modal>;
