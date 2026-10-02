@@ -40,7 +40,7 @@ if (!bundle) {
   }
 } else {
   const require = createRequire(import.meta.url);
-  const router = require(bundle).default;
+  const { default: router, startGrandCrownEarningsScheduler } = require(bundle);
   const storeFile = process.env.GRAND_CROWN_DATA_FILE;
   assert.ok(storeFile && storeFile.startsWith(os.tmpdir()) && !storeFile.endsWith("data.json"));
   let server;
@@ -366,7 +366,7 @@ if (!bundle) {
     assert.equal(readStore().transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
   });
 
-  test("withdrawals require at least UGX 3000 and deduct the 15% fee from withdrawable funds", async () => {
+  test("withdrawals allow any amount above the minimum but require an active product", async () => {
     const member = await register();
     const data = readStore();
     const storedMember = data.users.find((user) => user.id === member.user.id);
@@ -384,7 +384,9 @@ if (!bundle) {
     data.settings = {
       ...data.settings,
       minWithdrawal: 3000,
+      withdrawalMultiple: 500,
       withdrawalFeePercent: 15,
+      requirePlanBeforeWithdraw: false,
       restrictWithdrawalsToHours: false,
     };
     saveStore(data);
@@ -399,13 +401,89 @@ if (!bundle) {
     const result = await request("/withdrawals", {
       method: "POST",
       cookie: member.cookie,
-      body: { amount: 3000, method: "MTN Mobile Money", phone: "0700000001" },
+      body: { amount: 3001, method: "MTN Mobile Money", phone: "0700000001" },
     });
     assert.equal(result.status, 201);
-    assert.equal(result.body.withdrawal.amount, 3000);
+    assert.equal(result.body.withdrawal.amount, 3001);
     assert.equal(result.body.withdrawal.fee, 450);
-    assert.equal(result.body.withdrawal.netAmount, 2550);
-    assert.equal(readStore().users.find((user) => user.id === member.user.id).wallet, 2000);
+    assert.equal(result.body.withdrawal.netAmount, 2551);
+    assert.equal(readStore().users.find((user) => user.id === member.user.id).wallet, 1999);
+
+    const unactivated = await register();
+    const unactivatedData = readStore();
+    unactivatedData.users.find((user) => user.id === unactivated.user.id).wallet = 5000;
+    saveStore(unactivatedData);
+    const blocked = await request("/withdrawals", {
+      method: "POST",
+      cookie: unactivated.cookie,
+      body: { amount: 3000, method: "MTN Mobile Money", phone: "0700000001" },
+    });
+    assert.equal(blocked.status, 403);
+  });
+
+  test("scheduled earnings post every 24 hours without a dashboard visit and stop at plan duration", async () => {
+    const member = await register();
+    const data = readStore();
+    const storedMember = data.users.find((user) => user.id === member.user.id);
+    const startingWallet = storedMember.wallet;
+    const startingEarned = storedMember.totalEarned;
+    const product = data.products.find((item) => item.id === "TEST-PRODUCT");
+    product.daily = 100;
+    product.total = 300;
+    product.days = 3;
+    data.settings.cycleDays = 12;
+    const purchase = {
+      id: "SCHEDULED-EARNINGS-PURCHASE",
+      userId: member.user.id,
+      productId: product.id,
+      productName: product.name,
+      amount: 1000,
+      status: "active",
+      purchasedAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      earningsCredited: 0,
+    };
+    data.purchases.push(purchase);
+    saveStore(data);
+
+    const waitForCreditedDays = async (expected) => {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const current = readStore().purchases.find((item) => item.id === purchase.id);
+        if (current.earningsCredited === expected) return;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      assert.equal(readStore().purchases.find((item) => item.id === purchase.id).earningsCredited, expected);
+    };
+    let schedulerError;
+    let timer = startGrandCrownEarningsScheduler((error) => { schedulerError = error; }, 5);
+    try {
+      await waitForCreditedDays(1);
+    } finally {
+      clearInterval(timer);
+    }
+    assert.equal(schedulerError, undefined);
+    let stored = readStore();
+    assert.equal(stored.users.find((user) => user.id === member.user.id).wallet, startingWallet + 100);
+    assert.equal(stored.users.find((user) => user.id === member.user.id).totalEarned, startingEarned + 100);
+
+    stored.purchases.find((item) => item.id === purchase.id).purchasedAt =
+      new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+    saveStore(stored);
+    schedulerError = undefined;
+    timer = startGrandCrownEarningsScheduler((error) => { schedulerError = error; }, 5);
+    try {
+      await waitForCreditedDays(3);
+    } finally {
+      clearInterval(timer);
+    }
+    assert.equal(schedulerError, undefined);
+    stored = readStore();
+    assert.equal(stored.settings.cycleDays, 1);
+    assert.equal(stored.users.find((user) => user.id === member.user.id).wallet, startingWallet + 300);
+    assert.equal(
+      stored.transactions.filter((item) => item.type === "daily_earning" && item.purchaseId === purchase.id)
+        .map((item) => item.day).sort(),
+      [1, 2, 3],
+    );
   });
 
   test("new purchases pay only 10% to Level 1 while preserving historical Level 2 and Level 3 credits", async () => {
@@ -767,7 +845,7 @@ if (!bundle) {
     assert.equal((await request("/settings")).body.termsText, "");
   });
 
-  test("every supported administrator setting can be edited and persists", async () => {
+  test("administrator settings persist while earnings interval and withdrawal rules stay fixed", async () => {
     const current = (await request("/admin/settings", { cookie: adminCookie })).body;
     const input = {
       ...current,
@@ -810,12 +888,28 @@ if (!bundle) {
     });
     assert.equal(updated.status, 200);
     for (const [key, value] of Object.entries(input)) {
-      const expected = key === "openingAt" ? new Date(value).toISOString() : value;
+      const expected = key === "openingAt"
+        ? new Date(value).toISOString()
+        : key === "cycleDays"
+          ? 1
+          : key === "withdrawalMultiple"
+            ? 0
+            : key === "requirePlanBeforeWithdraw"
+              ? true
+              : value;
       assert.deepEqual(updated.body[key], expected, `${key} can be edited`);
     }
     const reloaded = await request("/admin/settings", { cookie: adminCookie });
     for (const [key, value] of Object.entries(input)) {
-      const expected = key === "openingAt" ? new Date(value).toISOString() : value;
+      const expected = key === "openingAt"
+        ? new Date(value).toISOString()
+        : key === "cycleDays"
+          ? 1
+          : key === "withdrawalMultiple"
+            ? 0
+            : key === "requirePlanBeforeWithdraw"
+              ? true
+              : value;
       assert.deepEqual(reloaded.body[key], expected, `${key} persists`);
     }
   });
