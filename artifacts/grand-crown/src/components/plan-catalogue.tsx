@@ -31,7 +31,7 @@ export function PlanCatalogue({ products, loading, error, onBuy, currency }: { p
         <div className="mt-2 font-display text-3xl font-bold uppercase tracking-wide text-accent sm:text-5xl">Grand Crown</div>
         <div className="mt-1 text-xs font-semibold uppercase tracking-[.4em] text-[hsl(40_40%_92%)]">Hotel &amp; Suites</div>
         <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[hsl(43_80%_62%)] to-[hsl(36_70%_48%)] px-4 py-2 font-display text-sm font-bold uppercase tracking-wider text-[hsl(160_45%_10%)]"><TrendingUp className="size-4" /> Investment packages</div>
-        <p className="mt-4 max-w-md text-sm leading-6 text-[hsl(40_30%_88%/.85)]">Thirteen rooms and suites, each with a stated price, daily earning, total and term. Pay for a selected package by mobile money; it activates after PesaJet confirms settlement.</p>
+        <p className="mt-4 max-w-md text-sm leading-6 text-[hsl(40_30%_88%/.85)]">Thirteen rooms and suites, each with a stated price, daily earning, total and term. Deposit by mobile money, then use confirmed product funds to buy the package you choose.</p>
       </div>
     </section>
 
@@ -65,6 +65,6 @@ export function PlanCatalogue({ products, loading, error, onBuy, currency }: { p
           </article>;
         })}
       </div>}
-    <p className="mt-6 text-center text-[11px] text-muted-foreground" data-testid="text-illustrative-note">Pictures are illustrative. A selected package activates only after the payment provider confirms settlement.</p>
+    <p className="mt-6 text-center text-[11px] text-muted-foreground" data-testid="text-illustrative-note">Pictures are illustrative. Products are purchased with product funds after they are credited to your account.</p>
   </div>;
 }
