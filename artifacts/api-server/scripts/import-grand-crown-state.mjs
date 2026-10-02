@@ -1,0 +1,41 @@
+import fs from "node:fs";
+import path from "node:path";
+import { eq } from "drizzle-orm";
+import { db, grandCrownStateTable, pool } from "@workspace/db";
+
+const sourceArgument = process.argv[2];
+if (!sourceArgument) {
+  throw new Error("Usage: pnpm --filter @workspace/api-server run state:import -- <source-json-path>");
+}
+
+const sourcePath = path.resolve(sourceArgument);
+const parsed = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
+    !parsed.settings || typeof parsed.settings !== "object" ||
+    !Array.isArray(parsed.products)) {
+  throw new Error("The source file is not a Grand Crown state document.");
+}
+
+try {
+  const [existing] = await db
+    .select({ id: grandCrownStateTable.id })
+    .from(grandCrownStateTable)
+    .where(eq(grandCrownStateTable.id, 1))
+    .limit(1);
+  if (existing) {
+    throw new Error("Grand Crown state already exists; refusing to overwrite it.");
+  }
+
+  await db.insert(grandCrownStateTable).values({
+    id: 1,
+    payload: parsed,
+  });
+
+  const collectionCounts = Object.fromEntries(
+    ["users", "purchases", "transactions", "payments", "withdrawals", "giftCodes"]
+      .map((key) => [key, Array.isArray(parsed[key]) ? parsed[key].length : 0]),
+  );
+  console.log(JSON.stringify({ imported: true, collectionCounts }));
+} finally {
+  await pool.end();
+}
