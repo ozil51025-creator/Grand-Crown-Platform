@@ -1314,7 +1314,7 @@ router.get("/admin/dashboard", (req, res) => {
     withdrawals: data.withdrawals.filter((item) => item.status === "pending").length,
     transactions: data.transactions.length,
     walletBalances: data.users.reduce((sum, user) => sum + user.wallet, 0),
-    totalDeposited: data.payments.filter((item) => item.status === "approved").reduce((sum, item) => sum + item.amount, 0),
+    totalDeposited: data.payments.filter((item) => item.status === "completed" || item.status === "approved").reduce((sum, item) => sum + item.amount, 0),
     totalWithdrawn: data.withdrawals.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0),
     totalInvested: data.purchases.reduce((sum, item) => sum + item.amount, 0),
   });
@@ -1425,38 +1425,6 @@ router.get("/admin/referrals", (req, res) => {
 router.get("/admin/settings", (req, res) => {
   if (!requireAdmin(req, res)) return;
   return res.json(readData().settings);
-});
-
-router.put("/admin/payments/:id", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
-  const payment = data.payments.find((item) => item.id === req.params.id);
-  const action = bodyString(req, "action");
-  if (!payment) return res.status(404).json({ error: "Payment not found" });
-  if (payment.status !== "pending") return res.status(409).json({ error: "Payment already reviewed" });
-  if (action !== "approve" && action !== "reject") return res.status(400).json({ error: "Invalid review action" });
-  payment.status = action === "approve" ? "approved" : "rejected";
-  payment.reviewedAt = now();
-  if (action === "approve") {
-    const purchase: Purchase = {
-      id: id("PUR"),
-      paymentId: payment.id,
-      userId: payment.userId,
-      productId: payment.productId,
-      productName: payment.productName,
-      amount: payment.amount,
-      status: "active",
-      purchasedAt: now(),
-      earningsCredited: 0,
-    };
-    data.purchases.push(purchase);
-    addTransaction(data, payment.userId, "purchase", payment.amount, { paymentId: payment.id, purchaseId: purchase.id });
-    const buyer = data.users.find((user) => user.id === payment.userId);
-    if (buyer) applyReferralCommissions(data, buyer, purchase);
-  }
-  data.activity.push({ id: id("ACT"), userId: payment.userId, type: `payment_${action}d`, createdAt: now() });
-  writeData(data);
-  return res.json({ ok: true, payment });
 });
 
 router.put("/admin/withdrawals/:id", (req, res) => {
