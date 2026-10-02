@@ -20,6 +20,7 @@ import {
   useGetAdminDashboard,
   getGetAdminDashboardQueryKey,
   getGetCurrentUserQueryKey,
+  getGetPaymentQueryKey,
   useGetAdminPayments,
   useGetAdminProducts,
   useGetAdminReferrals,
@@ -377,6 +378,7 @@ function ProductsView({ payments, onCheckPayment, depositBalance, onDeposit, ...
 function PaymentStatusModal({ paymentId, onClose }: { paymentId: string; onClose: () => void }) {
   const payment = useGetPayment(paymentId, {
     query: {
+      queryKey: getGetPaymentQueryKey(paymentId),
       refetchInterval: query => query.state.data?.status === 'pending' ? 3500 : false,
       refetchOnWindowFocus: true,
     },
@@ -469,8 +471,9 @@ function PurchaseModal({ product, depositBalance, currency, onClose, onPurchase,
   </Modal>;
 }
 
-function WithdrawModal({ balance, currency, values, setValues, onClose, onSubmit, pending, error }: { balance: number; currency: string; values: { amount: string; method: string; phone: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
-  return <Modal title="Request a withdrawal" onClose={onClose}><div className="rounded-2xl bg-secondary p-4 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Available balance</span><span className="font-mono font-semibold">{money(balance, currency)}</span></div><div className="mt-2 flex justify-between"><span className="text-muted-foreground">Minimum request</span><span className="font-mono font-semibold">{money(7000, currency)}</span></div></div><form onSubmit={onSubmit} className="mt-6 space-y-4"><Field label="Amount" data-testid="input-withdrawal-amount" type="number" min="7000" max={balance} placeholder="7000" value={values.amount} onChange={e => setValues({ ...values, amount: e.target.value })} required /><label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Payment method</span><select data-testid="select-withdrawal-method" className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none" value={values.method} onChange={e => setValues({ ...values, method: e.target.value })}><option>MTN Mobile Money</option><option>Airtel Money</option></select></label><Field label="Mobile-money number" data-testid="input-withdrawal-phone" type="tel" value={values.phone} onChange={e => setValues({ ...values, phone: e.target.value })} required /><p className="text-xs leading-5 text-muted-foreground">Withdrawals are reviewed by our team and paid manually. You will see the status in your account.</p>{error && <p className="text-sm text-destructive">We could not create that request. Check the amount and try again.</p>}<Button data-testid="button-submit-withdrawal" type="submit" className="w-full" disabled={pending}>{pending ? 'Submitting…' : 'Send withdrawal request'}</Button></form></Modal>;
+function WithdrawModal({ balance, currency, settings, values, setValues, onClose, onSubmit, pending, error }: { balance: number; currency: string; settings?: PublicSettings; values: { amount: string; method: string; phone: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
+  const minimum = settings?.minWithdrawal ?? 7000;
+  return <Modal title="Request a withdrawal" onClose={onClose}><div className="rounded-2xl bg-secondary p-4 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Withdrawable balance</span><span className="font-mono font-semibold">{money(balance, currency)}</span></div><div className="mt-2 flex justify-between"><span className="text-muted-foreground">Minimum request</span><span className="font-mono font-semibold">{money(minimum, currency)}</span></div></div><form onSubmit={onSubmit} className="mt-6 space-y-4"><Field label="Amount" data-testid="input-withdrawal-amount" type="number" min={minimum} max={balance} placeholder={String(minimum)} value={values.amount} onChange={e => setValues({ ...values, amount: e.target.value })} required /><label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Payment method</span><select data-testid="select-withdrawal-method" className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none" value={values.method} onChange={e => setValues({ ...values, method: e.target.value })}><option>MTN Mobile Money</option><option>Airtel Money</option></select></label><Field label="Mobile-money number" data-testid="input-withdrawal-phone" type="tel" value={values.phone} onChange={e => setValues({ ...values, phone: e.target.value })} required /><p className="text-xs leading-5 text-muted-foreground">Only earnings in your withdrawable balance can be requested. Withdrawals are reviewed by our team and paid manually.</p>{error && <p className="text-sm text-destructive">We could not create that request. Check the amount and try again.</p>}<Button data-testid="button-submit-withdrawal" type="submit" className="w-full" disabled={pending}>{pending ? 'Submitting…' : 'Send withdrawal request'}</Button></form></Modal>;
 }
 
 function AdminShell({ active, setActive, children, onLogout }: { active: string; setActive: (value: string) => void; children: ReactNode; onLogout: () => void }) {

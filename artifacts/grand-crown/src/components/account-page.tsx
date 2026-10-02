@@ -4,7 +4,7 @@ import {
   useChangeAccountPassword,
   useGetAccountTransactions,
   useRedeemGiftCode,
-  type Settings,
+  type PublicSettings,
   type Transaction,
   type User,
   type Withdrawal,
@@ -30,7 +30,7 @@ const inputCls = 'h-11 w-full rounded-xl border border-white/20 bg-white/5 px-3.
 const goldBtn = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-primary transition hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function AccountPage({ user, settings, withdrawals, withdrawalsLoading, withdrawalsError, currency, canWithdraw, onDeposit, onWithdraw, onLogout, loggingOut }: {
-  user: User; settings?: Settings; withdrawals?: Withdrawal[]; withdrawalsLoading: boolean; withdrawalsError: boolean; currency: string; canWithdraw?: boolean;
+  user: User; settings?: PublicSettings; withdrawals?: Withdrawal[]; withdrawalsLoading: boolean; withdrawalsError: boolean; currency: string; canWithdraw?: boolean;
   onDeposit: () => void; onWithdraw: () => void; onLogout: () => void; loggingOut?: boolean;
 }) {
   const [open, setOpen] = useState<Row>(null);
