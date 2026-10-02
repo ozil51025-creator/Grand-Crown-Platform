@@ -149,6 +149,43 @@ export interface AdminLoginInput {
   password: string;
 }
 
+export interface AdminAccountInput {
+  /**
+     * @minLength 3
+     * @maxLength 32
+     */
+  username: string;
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  password: string;
+}
+
+export type AdminAccountRole = typeof AdminAccountRole[keyof typeof AdminAccountRole];
+
+
+export const AdminAccountRole = {
+  Owner: 'Owner',
+  Admin: 'Admin',
+} as const;
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+  role: AdminAccountRole;
+  /** @nullable */
+  createdAt: string | null;
+  /** @nullable */
+  lastLoginAt: string | null;
+  isCurrent: boolean;
+}
+
+export interface AdminAccountsResponse {
+  canManage: boolean;
+  admins: AdminAccount[];
+}
+
 export interface AuthResponse {
   ok: boolean;
   user: User;

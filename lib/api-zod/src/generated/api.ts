@@ -287,6 +287,51 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+export const GetAdminAdminsResponse = zod.object({
+  "canManage": zod.boolean(),
+  "admins": zod.array(zod.object({
+  "id": zod.string(),
+  "username": zod.string(),
+  "role": zod.enum(['Owner', 'Admin']),
+  "createdAt": zod.string().nullable(),
+  "lastLoginAt": zod.string().nullable(),
+  "isCurrent": zod.boolean()
+}))
+})
+
+
+export const createAdminAccountBodyUsernameMin = 3;
+export const createAdminAccountBodyUsernameMax = 32;
+
+export const createAdminAccountBodyPasswordMin = 8;
+export const createAdminAccountBodyPasswordMax = 128;
+
+
+
+export const CreateAdminAccountBody = zod.object({
+  "username": zod.string().min(createAdminAccountBodyUsernameMin).max(createAdminAccountBodyUsernameMax),
+  "password": zod.string().min(createAdminAccountBodyPasswordMin).max(createAdminAccountBodyPasswordMax)
+})
+
+export const CreateAdminAccountResponse = zod.object({
+  "id": zod.string(),
+  "username": zod.string(),
+  "role": zod.enum(['Owner', 'Admin']),
+  "createdAt": zod.string().nullable(),
+  "lastLoginAt": zod.string().nullable(),
+  "isCurrent": zod.boolean()
+})
+
+
+export const DeleteAdminAccountParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteAdminAccountResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
 export const GetAdminUsersResponseItem = zod.object({
   "id": zod.string(),
   "phone": zod.string(),

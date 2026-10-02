@@ -239,6 +239,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
+  /admin/admins:
+    get:
+      operationId: getAdminAdmins
+      tags: [admin]
+      responses:
+        "200":
+          description: Administrator accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccountsResponse"
+    post:
+      operationId: createAdminAccount
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminAccountInput"
+      responses:
+        "201":
+          description: Administrator account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAccount"
+  /admin/admins/{id}:
+    delete:
+      operationId: deleteAdminAccount
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Administrator account removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
   /admin/users:
     get:
       operationId: getAdminUsers
@@ -709,6 +749,30 @@ components:
         username: { type: string }
         password: { type: string }
       required: [username, password]
+    AdminAccountInput:
+      type: object
+      properties:
+        username: { type: string, minLength: 3, maxLength: 32 }
+        password: { type: string, minLength: 8, maxLength: 128 }
+      required: [username, password]
+    AdminAccount:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [Owner, Admin] }
+        createdAt: { type: ["string", "null"] }
+        lastLoginAt: { type: ["string", "null"] }
+        isCurrent: { type: boolean }
+      required: [id, username, role, createdAt, lastLoginAt, isCurrent]
+    AdminAccountsResponse:
+      type: object
+      properties:
+        canManage: { type: boolean }
+        admins:
+          type: array
+          items: { $ref: "#/components/schemas/AdminAccount" }
+      required: [canManage, admins]
     AuthResponse:
       type: object
       properties:
