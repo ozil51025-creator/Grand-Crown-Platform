@@ -391,13 +391,13 @@ function Metric({ label, value, icon: Icon, accent = false }: { label: string; v
 function ProductsView({ payments, onCheckPayment, depositBalance, onDeposit, ...catalogueProps }: { products?: Product[]; loading: boolean; error: boolean; onBuy: (product: Product) => void; currency: string; payments?: Payment[]; onCheckPayment: (id: string) => void; depositBalance: number; onDeposit: () => void }) {
   return <div>
     <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-accent/30 bg-accent/10 p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div><div className="text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">Product funds · not withdrawable</div><div className="mt-1 font-display text-2xl font-semibold">{money(depositBalance, catalogueProps.currency)}</div><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Confirmed mobile-money deposits appear here. Use them to buy products; they are separate from your withdrawable earnings.</p></div>
+      <div><div className="text-xs font-bold uppercase tracking-[.14em] text-muted-foreground">Product funds · not withdrawable</div><div className="mt-1 font-display text-2xl font-semibold">{money(depositBalance, catalogueProps.currency)}</div><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Manually verified mobile-money deposits appear here. Use them to buy products; they are separate from your withdrawable earnings.</p></div>
       <Button data-testid="button-open-deposit" onClick={onDeposit} className="shrink-0"><ArrowDownToLine className="size-4" /> Deposit funds</Button>
     </div>
     <PlanCatalogue {...catalogueProps} />
     {!!payments?.length && <section className="mt-8 rounded-3xl border border-border bg-card p-5 sm:p-7" aria-labelledby="payment-history-title">
-      <div className="mb-4 flex items-center justify-between gap-3"><div><h2 id="payment-history-title" className="font-display text-2xl font-semibold">Deposit activity</h2><p className="mt-1 text-sm text-muted-foreground">Deposits are added to product funds only after provider confirmation.</p></div><Receipt className="size-5 text-accent-foreground" /></div>
-      <div className="divide-y divide-border">{payments.slice(0, 8).map(item => <div key={item.id} data-testid={`row-member-payment-${item.id}`} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">Mobile-money deposit <StatusPill status={item.status} /></div><div className="mt-1 text-xs text-muted-foreground">{money(item.amount, catalogueProps.currency)} · {item.method} · {shortDate(item.createdAt)}</div></div>{item.status === 'pending' && <Button data-testid={`button-check-payment-${item.id}`} variant="outline" className="min-h-9 self-start px-3 text-xs sm:self-auto" onClick={() => onCheckPayment(item.id)}>Check status <ArrowUpRight className="size-3.5" /></Button>}</div>)}</div>
+      <div className="mb-4 flex items-center justify-between gap-3"><div><h2 id="payment-history-title" className="font-display text-2xl font-semibold">Deposit activity</h2><p className="mt-1 text-sm text-muted-foreground">Product funds are credited only after an administrator verifies the transfer.</p></div><Receipt className="size-5 text-accent-foreground" /></div>
+      <div className="divide-y divide-border">{payments.slice(0, 8).map(item => <div key={item.id} data-testid={`row-member-payment-${item.id}`} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-semibold">Mobile-money deposit <StatusPill status={item.status} /></div><div className="mt-1 text-xs text-muted-foreground">{money(item.amount, catalogueProps.currency)} · {item.method} · {shortDate(item.createdAt)}</div>{item.payerReference && <div className="mt-1 text-xs text-muted-foreground">Transfer reference: <span className="font-mono text-foreground">{item.payerReference}</span></div>}</div>{item.status === 'pending' && <Button data-testid={`button-check-payment-${item.id}`} variant="outline" className="min-h-9 self-start px-3 text-xs sm:self-auto" onClick={() => onCheckPayment(item.id)}>View review status <ArrowUpRight className="size-3.5" /></Button>}</div>)}</div>
     </section>}
   </div>;
 }
@@ -412,26 +412,26 @@ function PaymentStatusModal({ paymentId, onClose }: { paymentId: string; onClose
   });
   const { toast } = useToast();
   useEffect(() => {
-    if (payment.data?.status === 'completed') {
+    if (payment.data?.status === 'completed' || payment.data?.status === 'approved') {
       queryClient.invalidateQueries();
       toast({ title: 'Deposit confirmed', description: 'Purchase-only product funds have been added to your account.' });
     }
   }, [payment.data?.status]);
   const status = payment.data?.status;
-  const message = status === 'completed'
-    ? 'PesaJet confirmed your deposit. The funds are now in your product balance and can be used to buy products.'
-    : status === 'failed'
-      ? 'PesaJet could not complete this deposit. No funds were added; you can start a new payment attempt.'
-      : status === 'expired'
-        ? 'This deposit request expired without confirmation. No funds were added; you can start a new payment attempt.'
-        : 'Waiting for PesaJet to confirm settlement. Check your phone for the mobile-money prompt and enter your PIN only on your handset. Product funds are credited only after confirmation.';
-  return <Modal title={status === 'completed' ? 'Deposit confirmed' : status === 'failed' || status === 'expired' ? 'Deposit not completed' : 'Waiting for payment'} onClose={onClose}>
+  const message = status === 'completed' || status === 'approved'
+    ? 'An administrator verified your transfer. The funds are now in your product balance and can be used to buy products.'
+    : status === 'rejected'
+      ? 'An administrator could not verify this transfer. No funds were added. Contact support if you believe this is incorrect.'
+      : status === 'failed' || status === 'expired'
+        ? 'This deposit request was not completed. No funds were added.'
+        : 'Your transfer reference is waiting for administrator review. Product funds are credited only after verification.';
+  return <Modal title={status === 'completed' || status === 'approved' ? 'Deposit confirmed' : status === 'rejected' || status === 'failed' || status === 'expired' ? 'Deposit not approved' : 'Waiting for review'} onClose={onClose}>
     <div className="rounded-2xl bg-secondary p-4">
       <div className="flex items-center justify-between gap-3"><span className="font-semibold">Mobile-money deposit</span><StatusPill status={status || (payment.isError ? 'status unavailable' : 'pending')} /></div>
       {payment.data && <div className="mt-2 font-mono text-sm">{money(payment.data.amount, 'UGX')}</div>}
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">{payment.isError ? 'We could not check the provider right now. This payment remains unconfirmed; we will keep checking while this window stays open.' : message}</p>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{payment.isError ? 'We could not load this deposit status right now. Please try again later.' : message}</p>
     </div>
-    {status === 'pending' && <p className="mt-4 text-xs leading-5 text-muted-foreground" aria-live="polite">Status refreshes automatically. Do not start another payment for the same request.</p>}
+    {status === 'pending' && <p className="mt-4 text-xs leading-5 text-muted-foreground" aria-live="polite">Status refreshes automatically. Do not submit the same transfer reference again.</p>}
     <Button data-testid="button-close-payment-status" className="mt-6 w-full" variant="outline" onClick={onClose}>Close</Button>
   </Modal>;
 }
@@ -466,19 +466,26 @@ function ActivityTable({ transactions, currency }: { transactions: any[]; curren
   return <div className="space-y-2">{transactions.slice(0, 5).map(item => <div key={item.id} data-testid={`row-transaction-${item.id}`} className="flex items-center justify-between rounded-xl px-3 py-3 transition hover:bg-secondary/60"><div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-xl bg-secondary"><ArrowUpRight className="size-4 text-accent-foreground" /></div><div><div className="text-sm font-semibold capitalize">{item.type.replaceAll('_', ' ')}</div><div className="text-xs text-muted-foreground">{shortDate(item.createdAt)}</div></div></div><div className="font-mono text-sm font-semibold">{money(item.amount, currency)}</div></div>)}</div>;
 }
 
-function DepositModal({ amount, setAmount, settings, values, setValues, onClose, onSubmit, pending, error }: { amount: string; setAmount: (value: string) => void; settings?: PublicSettings; values: { method: string; payerPhone: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
+function DepositModal({ amount, setAmount, settings, values, setValues, onClose, onSubmit, pending, error }: { amount: string; setAmount: (value: string) => void; settings?: PublicSettings; values: { method: string; payerPhone: string; payerReference: string }; setValues: (value: any) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error?: boolean }) {
+  const destinationNumber = values.method === 'MTN Mobile Money' ? settings?.mtnNumber : settings?.airtelNumber;
   return <Modal title="Deposit product funds" onClose={onClose} wide>
     <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
       <div className="flex items-center justify-between gap-4"><span className="text-sm text-primary-foreground/65">Deposit amount</span><span className="font-display text-2xl font-semibold">{money(Number(amount) || 0, settings?.currency)}</span></div>
-      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />Confirmed funds are credited to your product balance, not your withdrawable wallet. PesaJet will prompt your phone. Enter your mobile-money PIN only on your handset, never here.</div>
+      <div className="mt-4 flex items-start gap-2 text-xs leading-5 text-primary-foreground/75"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />Send money manually to the account below. Product funds are credited only after an administrator verifies the transfer.</div>
     </div>
     <form onSubmit={onSubmit} className="mt-6 space-y-4">
-      <Field label={`Deposit amount · minimum ${money(settings?.minDeposit ?? 500, settings?.currency)}`} data-testid="input-deposit-amount" type="number" inputMode="numeric" min={settings?.minDeposit ?? 500} step="1" value={amount} onChange={event => setAmount(event.target.value)} required />
+      <Field label={`Deposit amount · minimum ${money(settings?.minDeposit ?? 19000, settings?.currency)}`} data-testid="input-deposit-amount" type="number" inputMode="numeric" min={settings?.minDeposit ?? 19000} step="1" value={amount} onChange={event => setAmount(event.target.value)} required />
       <label className="block space-y-2"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-muted-foreground">Mobile-money network</span><select data-testid="select-payment-method" className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none focus:border-accent" value={values.method} onChange={event => setValues({ ...values, method: event.target.value })}><option>MTN Mobile Money</option><option>Airtel Money</option></select></label>
-      <Field label="Phone number to prompt" data-testid="input-payer-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="07xx xxx xxx or +256..." value={values.payerPhone} onChange={event => setValues({ ...values, payerPhone: event.target.value })} required />
-      <p className="text-xs leading-5 text-muted-foreground">A prompt appears on this phone after you continue. Product funds are credited only after PesaJet confirms settlement.</p>
-      {error && <p role="alert" className="text-sm text-destructive">PesaJet could not create the payment request. Check the number or try again later.</p>}
-      <Button data-testid="button-submit-payment" type="submit" className="w-full" disabled={pending}>{pending ? 'Sending phone prompt…' : 'Send deposit prompt'}<ArrowUpRight className="size-4" /></Button>
+      <div className="rounded-xl border border-accent/30 bg-accent/10 p-4" data-testid="panel-manual-payment-details">
+        <div className="text-[10px] font-bold uppercase tracking-[.14em] text-muted-foreground">Send to this account</div>
+        <div className="mt-2 font-mono text-lg font-semibold" data-testid="text-deposit-destination-number">{destinationNumber || 'Contact support for the current number'}</div>
+        <div className="mt-1 text-sm text-muted-foreground">Registered name: <span className="font-semibold text-foreground">{settings?.payeeName || 'Nakaliiba Martha'}</span></div>
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">Transfer the exact amount shown above to this number on the selected network before submitting your receipt reference.</p>
+      </div>
+      <Field label="Number you sent the money from" data-testid="input-payer-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="07xx xxx xxx or +256..." value={values.payerPhone} onChange={event => setValues({ ...values, payerPhone: event.target.value })} required />
+      <Field label="Mobile-money transaction reference" data-testid="input-payer-reference" autoComplete="off" maxLength={80} value={values.payerReference} onChange={event => setValues({ ...values, payerReference: event.target.value })} required />
+      {error && <p role="alert" className="text-sm text-destructive">Could not submit this transfer. Check the details and make sure the reference has not already been used.</p>}
+      <Button data-testid="button-submit-payment" type="submit" className="w-full" disabled={pending}>{pending ? 'Submitting…' : 'Submit transfer for review'}<ArrowUpRight className="size-4" /></Button>
     </form>
   </Modal>;
 }
