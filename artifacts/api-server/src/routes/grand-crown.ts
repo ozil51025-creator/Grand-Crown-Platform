@@ -1450,13 +1450,13 @@ router.put("/admin/withdrawals/:id", async (req, res) => {
     });
   }
   data.activity.push({ id: id("ACT"), userId: withdrawal.userId, type: `withdrawal_${action}d`, createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true, withdrawal });
 });
 
-router.post("/admin/products", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.post("/admin/products", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const name = bodyString(req, "name");
   const price = bodyNumber(req, "price");
   const daily = bodyNumber(req, "daily");
@@ -1467,27 +1467,27 @@ router.post("/admin/products", (req, res) => {
   }
   const product: Product = { id: id("PROD"), name, price, daily, total, days };
   data.products.push(product);
-  writeData(data);
+  await writeData(data);
   return res.status(201).json(product);
 });
 
-router.delete("/admin/products/:id", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.delete("/admin/products/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const index = data.products.findIndex((item) => item.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: "Product not found" });
   data.products.splice(index, 1);
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true });
 });
 
-router.put("/admin/settings", (req, res) => {
-  if (!requireAdmin(req, res)) return;
+router.put("/admin/settings", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
   const parsed = UpdateAdminSettingsBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Enter valid settings; terms text must be at most 20000 characters." });
   }
-  const data = readData();
+  const data = await readData();
   if (!parsed.data.brand.trim()) {
     return res.status(400).json({ error: "Brand cannot be blank" });
   }
@@ -1505,7 +1505,7 @@ router.put("/admin/settings", (req, res) => {
     brand: parsed.data.brand.trim().slice(0, 80),
     allowedDomains: allowedDomains.filter((domain): domain is string => Boolean(domain)),
   };
-  writeData(data);
+  await writeData(data);
   return res.json(data.settings);
 });
 
