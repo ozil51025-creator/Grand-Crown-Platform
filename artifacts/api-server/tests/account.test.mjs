@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import crypto from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
@@ -28,7 +29,12 @@ if (!bundle) {
       logLevel: "silent",
     });
     const result = spawnSync(process.execPath, [filename, output], {
-      env: { ...process.env, GRAND_CROWN_DATA_FILE: path.join(temporary, "store.json") },
+      env: {
+        ...process.env,
+        GRAND_CROWN_DATA_FILE: path.join(temporary, "store.json"),
+        PESAJET_API_KEY: "test-pesajet-key",
+        PESAJET_WEBHOOK_SECRET: "test-pesajet-webhook-secret",
+      },
       stdio: "inherit",
     });
     process.exitCode = result.status ?? 1;
@@ -40,6 +46,38 @@ if (!bundle) {
   const router = require(bundle).default;
   const storeFile = process.env.GRAND_CROWN_DATA_FILE;
   assert.ok(storeFile && storeFile.startsWith(os.tmpdir()) && !storeFile.endsWith("data.json"));
+  const realFetch = globalThis.fetch;
+  const providerTransactions = new Map();
+  const providerRequests = [];
+  let providerSequence = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname !== "payments.pesajet.com") return realFetch(input, init);
+    providerRequests.push({ url: url.toString(), init });
+    if (init?.method === "POST" && url.pathname === "/api/v1/payments") {
+      const body = JSON.parse(String(init.body));
+      providerSequence += 1;
+      const transaction = {
+        transactionId: `PJ-TEST-${providerSequence}`,
+        reference: body.reference,
+        amount: body.amount,
+        currency: body.currency,
+        status: "PENDING",
+        provider: body.provider,
+        type: body.type,
+      };
+      providerTransactions.set(transaction.transactionId, transaction);
+      return new Response(JSON.stringify(transaction), { status: 201, headers: { "Content-Type": "application/json" } });
+    }
+    if (init?.method !== "POST" && url.pathname.startsWith("/api/v1/payments/")) {
+      const id = decodeURIComponent(url.pathname.slice("/api/v1/payments/".length));
+      const transaction = providerTransactions.get(id);
+      return transaction
+        ? new Response(JSON.stringify(transaction), { status: 200, headers: { "Content-Type": "application/json" } })
+        : new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ error: "Unexpected test request" }), { status: 400, headers: { "Content-Type": "application/json" } });
+  };
   let server;
   let origin;
   let adminCookie;
@@ -123,6 +161,9 @@ if (!bundle) {
   });
   beforeEach(async () => {
     testIndex += 1;
+    providerTransactions.clear();
+    providerRequests.length = 0;
+    providerSequence = 0;
     saveStore(initial());
     const result = await request("/admin/auth/login", {
       method: "POST",
