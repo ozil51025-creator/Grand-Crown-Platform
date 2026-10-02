@@ -142,6 +142,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReferralOverview"
   /payments:
+    get:
+      operationId: getPayments
+      tags: [customer]
+      responses:
+        "200":
+          description: Customer payment attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
     post:
       operationId: submitPayment
       tags: [customer]
@@ -153,11 +165,24 @@ paths:
               $ref: "#/components/schemas/PaymentInput"
       responses:
         "201":
-          description: Payment submitted for review
+          description: Mobile-money collection initiated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaymentResponse"
+  /payments/{id}:
+    get:
+      operationId: getPayment
+      tags: [customer]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Payment status verified with the provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
   /purchases:
     get:
       operationId: getPurchases
@@ -375,25 +400,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Payment"
-  /admin/payments/{id}:
-    put:
-      operationId: reviewPayment
-      tags: [admin]
-      parameters:
-        - $ref: "#/components/parameters/Id"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReviewInput"
-      responses:
-        "200":
-          description: Payment reviewed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PaymentResponse"
   /admin/withdrawals:
     get:
       operationId: getAdminWithdrawals
@@ -942,19 +948,19 @@ components:
         method: { type: string }
         payerPhone: { type: string }
         transactionId: { type: string }
+        providerTransactionId: { type: ["string", "null"] }
         status: { type: string }
         createdAt: { type: string }
         reviewedAt: { type: ["string", "null"] }
+        settledAt: { type: ["string", "null"] }
       required: [id, userId, productId, productName, amount, method, payerPhone, transactionId, status, createdAt]
     PaymentInput:
       type: object
       properties:
         productId: { type: string }
         method: { type: string }
-        amount: { type: number }
         payerPhone: { type: string }
-        transactionId: { type: string }
-      required: [productId, method, amount, payerPhone, transactionId]
+      required: [productId, method, payerPhone]
     PaymentResponse:
       type: object
       properties:

@@ -65,8 +65,10 @@ type Payment = {
   method: string;
   payerPhone: string;
   transactionId: string;
-  status: "pending" | "approved" | "rejected";
+  providerTransactionId?: string;
+  status: "pending" | "completed" | "failed" | "expired" | "approved" | "rejected";
   createdAt: string;
+  settledAt?: string;
   reviewedAt?: string;
 };
 
@@ -580,6 +582,147 @@ function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
     }
     referrerId = referrer.referredBy;
   }
+}
+
+type PesaJetTransaction = {
+  transactionId: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: string;
+  provider?: string;
+  type?: string;
+};
+
+class PesaJetRequestError extends Error {
+  constructor(message: string, readonly statusCode?: number) {
+    super(message);
+    this.name = "PesaJetRequestError";
+  }
+}
+
+function normalizeUgandaPhone(value: string) {
+  const digits = value.replace(/[\s()-]/g, "");
+  const international = digits.startsWith("0")
+    ? `+256${digits.slice(1)}`
+    : digits.startsWith("256")
+      ? `+${digits}`
+      : digits;
+  return /^\+256[0-9]{9}$/.test(international) ? international : undefined;
+}
+
+function paymentProvider(method: string) {
+  if (method === "MTN Mobile Money") return "mtn";
+  if (method === "Airtel Money") return "airtel";
+  return undefined;
+}
+
+async function pesajetRequest<T>(pathname: string, init: RequestInit = {}): Promise<T> {
+  const apiKey = process.env["PESAJET_API_KEY"];
+  if (!apiKey) throw new PesaJetRequestError("PesaJet is not configured", 503);
+  let response: globalThis.Response;
+  try {
+    response = await fetch(`https://payments.pesajet.com/api/v1${pathname}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": apiKey,
+        ...init.headers,
+      },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch {
+    throw new PesaJetRequestError("PesaJet could not be reached");
+  }
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new PesaJetRequestError(`PesaJet rejected the request (${response.status})`, response.status);
+  }
+  return body as T;
+}
+
+function createPesaJetCollection(payment: Payment, provider: "mtn" | "airtel") {
+  const phoneNumber = normalizeUgandaPhone(payment.payerPhone);
+  if (!phoneNumber) throw new PesaJetRequestError("Enter a valid Ugandan mobile number", 400);
+  return pesajetRequest<PesaJetTransaction>("/payments", {
+    method: "POST",
+    headers: { "Idempotency-Key": payment.transactionId },
+    body: JSON.stringify({
+      type: "COLLECTION",
+      amount: payment.amount,
+      currency: "UGX",
+      phoneNumber,
+      provider,
+      reference: payment.transactionId,
+      description: `Grand Crown product purchase: ${payment.productName}`,
+      metadata: { paymentId: payment.id, productId: payment.productId },
+    }),
+  });
+}
+
+function applyVerifiedProviderTransaction(
+  data: Data,
+  payment: Payment,
+  transaction: PesaJetTransaction,
+  expectedProvider: "mtn" | "airtel",
+) {
+  if (
+    !transaction ||
+    typeof transaction.transactionId !== "string" ||
+    transaction.reference !== payment.transactionId ||
+    Number(transaction.amount) !== payment.amount ||
+    transaction.currency !== "UGX" ||
+    (transaction.provider && transaction.provider.toLowerCase() !== expectedProvider) ||
+    (transaction.type && transaction.type.toUpperCase() !== "COLLECTION") ||
+    (payment.providerTransactionId && transaction.transactionId !== payment.providerTransactionId)
+  ) {
+    throw new PesaJetRequestError("PesaJet transaction did not match this payment");
+  }
+  payment.providerTransactionId = transaction.transactionId;
+  if (payment.status !== "pending") return;
+
+  const providerStatus = transaction.status.toUpperCase();
+  if (providerStatus === "COMPLETED") {
+    payment.status = "completed";
+    payment.settledAt = now();
+    const purchase: Purchase = {
+      id: id("PUR"),
+      paymentId: payment.id,
+      userId: payment.userId,
+      productId: payment.productId,
+      productName: payment.productName,
+      amount: payment.amount,
+      status: "active",
+      purchasedAt: payment.settledAt,
+      earningsCredited: 0,
+    };
+    data.purchases.push(purchase);
+    addTransaction(data, payment.userId, "purchase", payment.amount, {
+      paymentId: payment.id,
+      purchaseId: purchase.id,
+    });
+    const buyer = data.users.find((user) => user.id === payment.userId);
+    if (buyer) applyReferralCommissions(data, buyer, purchase);
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_completed", createdAt: payment.settledAt });
+  } else if (providerStatus === "FAILED") {
+    payment.status = "failed";
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_failed", createdAt: now() });
+  } else if (providerStatus === "EXPIRED") {
+    payment.status = "expired";
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_expired", createdAt: now() });
+  }
+}
+
+function verifyPesaJetWebhook(payload: Record<string, unknown>, headerSignature: string) {
+  const secret = process.env["PESAJET_WEBHOOK_SECRET"];
+  if (!secret) return false;
+  const { signature: payloadSignature, ...unsignedPayload } = payload;
+  const supplied = headerSignature || (typeof payloadSignature === "string" ? payloadSignature : "");
+  if (!/^[a-f0-9]{64}$/i.test(supplied)) return false;
+  const expected = crypto.createHmac("sha256", secret).update(JSON.stringify(unsignedPayload)).digest("hex");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  const suppliedBuffer = Buffer.from(supplied, "utf8");
+  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
 const router: IRouter = Router();

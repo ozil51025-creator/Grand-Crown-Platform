@@ -7,7 +7,32 @@
     "airtelNumber": "0743240195",
     "mtnNumber": "0764312328",
     "payeeName": "Nakaliiba Martha",
-    "termsText": ""
+    "termsText": "",
+    "minDeposit": 500,
+    "minWithdrawal": 7000,
+    "withdrawalMultiple": 0,
+    "welcomeBonus": 1000,
+    "checkinBonus": 50,
+    "withdrawalFeePercent": 12,
+    "l1CommissionPercent": 25,
+    "l2CommissionPercent": 2,
+    "l3CommissionPercent": 1,
+    "returnMultiple": 4,
+    "cycleDays": 1,
+    "maxWithdrawalsPerUserPerDay": 0,
+    "requirePlanBeforeWithdraw": true,
+    "restrictWithdrawalsToHours": false,
+    "withdrawalStartTime": "06:00",
+    "withdrawalEndTime": "17:00",
+    "requireReferralCode": false,
+    "maintenanceMode": false,
+    "maintenanceMessage": "We’re performing maintenance. Please check back shortly.",
+    "openingCountdown": false,
+    "openingAt": null,
+    "allowedDomains": [],
+    "announcementEnabled": false,
+    "announcementTitle": "Grand Crown update",
+    "announcementMessage": ""
   },
   "products": [
     {
@@ -156,6 +181,7 @@
       "banned": false
     }
   ],
+  "adminAccounts": [],
   "purchases": [],
   "transactions": [
     {
@@ -212,9 +238,46 @@
       "userId": "USR-17B5675666A15F",
       "type": "signup",
       "createdAt": "2026-09-26T02:44:51.643Z"
+    },
+    {
+      "id": "ACT-05E18F68887913",
+      "userId": "USR-17B5675666A15F",
+      "type": "payment_submitted",
+      "createdAt": "2026-10-02T05:12:47.314Z"
+    },
+    {
+      "id": "ACT-EC9AE1511CEBE4",
+      "userId": "USR-17B5675666A15F",
+      "type": "payment_submitted",
+      "createdAt": "2026-10-02T05:13:24.181Z"
     }
   ],
-  "payments": [],
+  "payments": [
+    {
+      "id": "PAY-F542F8C54CB0BD",
+      "userId": "USR-17B5675666A15F",
+      "productId": "PROD-DE8DE5C10F9BA0",
+      "productName": "Garden View",
+      "amount": 19000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0764312328",
+      "transactionId": "GC-5D91947A74A3455EA332",
+      "status": "pending",
+      "createdAt": "2026-10-02T05:12:47.314Z"
+    },
+    {
+      "id": "PAY-D4F76B78EA8DC5",
+      "userId": "USR-17B5675666A15F",
+      "productId": "PROD-E251AC9BCF56AD",
+      "productName": "Mountain View",
+      "amount": 30000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0764312328",
+      "transactionId": "GC-F3C790289839447DB7CB",
+      "status": "pending",
+      "createdAt": "2026-10-02T05:13:24.181Z"
+    }
+  ],
   "withdrawals": [],
   "giftCodes": []
 }
