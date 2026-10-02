@@ -289,6 +289,42 @@
       "userId": "USR-17B5675666A15F",
       "type": "deposit_failed",
       "createdAt": "2026-10-02T05:46:13.733Z"
+    },
+    {
+      "id": "ACT-5ED389D63B5827",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_initiated",
+      "createdAt": "2026-10-02T06:09:20.941Z"
+    },
+    {
+      "id": "ACT-2F9E1E8E54DAEB",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_failed",
+      "createdAt": "2026-10-02T06:09:21.399Z"
+    },
+    {
+      "id": "ACT-4D48F4087D4FAA",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_initiated",
+      "createdAt": "2026-10-02T06:09:57.337Z"
+    },
+    {
+      "id": "ACT-C34282BC225848",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_failed",
+      "createdAt": "2026-10-02T06:09:57.689Z"
+    },
+    {
+      "id": "ACT-2A5FFD6D9D9BA2",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_initiated",
+      "createdAt": "2026-10-02T06:10:22.729Z"
+    },
+    {
+      "id": "ACT-D94F33D8301590",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_failed",
+      "createdAt": "2026-10-02T06:10:23.086Z"
     }
   ],
   "payments": [
@@ -348,6 +384,39 @@
       "providerRequestStartedAt": "2026-10-02T05:46:13.377Z",
       "status": "failed",
       "createdAt": "2026-10-02T05:46:13.377Z"
+    },
+    {
+      "id": "PAY-EE7B91DE02AFB0",
+      "userId": "USR-17B5675666A15F",
+      "amount": 10000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0764312328",
+      "transactionId": "GC-6A7B2457BDC83880F4175C69",
+      "providerRequestStartedAt": "2026-10-02T06:09:20.941Z",
+      "status": "failed",
+      "createdAt": "2026-10-02T06:09:20.941Z"
+    },
+    {
+      "id": "PAY-A0ABBAF90755CE",
+      "userId": "USR-17B5675666A15F",
+      "amount": 19000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0743240195",
+      "transactionId": "GC-4D11C80E7D9AE308A6614DE7",
+      "providerRequestStartedAt": "2026-10-02T06:09:57.337Z",
+      "status": "failed",
+      "createdAt": "2026-10-02T06:09:57.337Z"
+    },
+    {
+      "id": "PAY-2BDD55070ABE0A",
+      "userId": "USR-17B5675666A15F",
+      "amount": 19000,
+      "method": "Airtel Money",
+      "payerPhone": "0743240195",
+      "transactionId": "GC-BDDB90B26D6074A123BE429D",
+      "providerRequestStartedAt": "2026-10-02T06:10:22.729Z",
+      "status": "failed",
+      "createdAt": "2026-10-02T06:10:22.729Z"
     }
   ],
   "withdrawals": [],
