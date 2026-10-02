@@ -20,12 +20,36 @@ export const HealthCheckResponse = zod.object({
 export const GetSettingsResponse = zod.object({
   "brand": zod.string(),
   "currency": zod.string(),
-  "supportHandle": zod.string().optional(),
-  "telegramUrl": zod.string().optional(),
-  "airtelNumber": zod.string().optional(),
-  "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional(),
-  "termsText": zod.string().optional()
+  "supportHandle": zod.string(),
+  "telegramUrl": zod.string(),
+  "airtelNumber": zod.string(),
+  "mtnNumber": zod.string(),
+  "payeeName": zod.string(),
+  "termsText": zod.string(),
+  "minDeposit": zod.number(),
+  "minWithdrawal": zod.number(),
+  "withdrawalMultiple": zod.number(),
+  "welcomeBonus": zod.number(),
+  "checkinBonus": zod.number(),
+  "withdrawalFeePercent": zod.number(),
+  "l1CommissionPercent": zod.number(),
+  "l2CommissionPercent": zod.number(),
+  "l3CommissionPercent": zod.number(),
+  "returnMultiple": zod.number(),
+  "cycleDays": zod.number().int(),
+  "maxWithdrawalsPerUserPerDay": zod.number().int(),
+  "requirePlanBeforeWithdraw": zod.boolean(),
+  "restrictWithdrawalsToHours": zod.boolean(),
+  "withdrawalStartTime": zod.string(),
+  "withdrawalEndTime": zod.string(),
+  "requireReferralCode": zod.boolean(),
+  "maintenanceMode": zod.boolean(),
+  "maintenanceMessage": zod.string(),
+  "openingCountdown": zod.boolean(),
+  "openingAt": zod.coerce.date().nullable(),
+  "announcementEnabled": zod.boolean(),
+  "announcementTitle": zod.string(),
+  "announcementMessage": zod.string()
 })
 
 
@@ -103,7 +127,10 @@ export const GetCurrentUserResponse = zod.object({
   "createdAt": zod.string(),
   "lastCheckin": zod.string().nullish(),
   "banned": zod.boolean()
-}),zod.null()]).optional()
+}),zod.null()]).optional(),
+  "accessMode": zod.enum(['available', 'maintenance', 'opening']),
+  "accessMessage": zod.string(),
+  "openingAt": zod.coerce.date().nullable()
 })
 
 
@@ -594,40 +621,162 @@ export const GetAdminActivityResponse = zod.array(GetAdminActivityResponseItem)
 export const GetAdminSettingsResponse = zod.object({
   "brand": zod.string(),
   "currency": zod.string(),
-  "supportHandle": zod.string().optional(),
-  "telegramUrl": zod.string().optional(),
-  "airtelNumber": zod.string().optional(),
-  "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional(),
-  "termsText": zod.string().optional()
+  "supportHandle": zod.string(),
+  "telegramUrl": zod.string(),
+  "airtelNumber": zod.string(),
+  "mtnNumber": zod.string(),
+  "payeeName": zod.string(),
+  "termsText": zod.string(),
+  "minDeposit": zod.number(),
+  "minWithdrawal": zod.number(),
+  "withdrawalMultiple": zod.number(),
+  "welcomeBonus": zod.number(),
+  "checkinBonus": zod.number(),
+  "withdrawalFeePercent": zod.number(),
+  "l1CommissionPercent": zod.number(),
+  "l2CommissionPercent": zod.number(),
+  "l3CommissionPercent": zod.number(),
+  "returnMultiple": zod.number(),
+  "cycleDays": zod.number().int(),
+  "maxWithdrawalsPerUserPerDay": zod.number().int(),
+  "requirePlanBeforeWithdraw": zod.boolean(),
+  "restrictWithdrawalsToHours": zod.boolean(),
+  "withdrawalStartTime": zod.string(),
+  "withdrawalEndTime": zod.string(),
+  "requireReferralCode": zod.boolean(),
+  "maintenanceMode": zod.boolean(),
+  "maintenanceMessage": zod.string(),
+  "openingCountdown": zod.boolean(),
+  "openingAt": zod.coerce.date().nullable(),
+  "allowedDomains": zod.array(zod.string()),
+  "announcementEnabled": zod.boolean(),
+  "announcementTitle": zod.string(),
+  "announcementMessage": zod.string()
 })
 
 
 
 export const updateAdminSettingsBodyTermsTextMax = 20000;
 
+export const updateAdminSettingsBodyMinDepositMin = 0;
+export const updateAdminSettingsBodyMinDepositMax = 100000000;
+
+export const updateAdminSettingsBodyMinWithdrawalMin = 0;
+export const updateAdminSettingsBodyMinWithdrawalMax = 100000000;
+
+export const updateAdminSettingsBodyWithdrawalMultipleMin = 0;
+export const updateAdminSettingsBodyWithdrawalMultipleMax = 100000000;
+
+export const updateAdminSettingsBodyWelcomeBonusMin = 0;
+export const updateAdminSettingsBodyWelcomeBonusMax = 100000000;
+
+export const updateAdminSettingsBodyCheckinBonusMin = 0;
+export const updateAdminSettingsBodyCheckinBonusMax = 100000000;
+
+export const updateAdminSettingsBodyWithdrawalFeePercentMin = 0;
+export const updateAdminSettingsBodyWithdrawalFeePercentMax = 100;
+
+export const updateAdminSettingsBodyL1CommissionPercentMin = 0;
+export const updateAdminSettingsBodyL1CommissionPercentMax = 100;
+
+export const updateAdminSettingsBodyL2CommissionPercentMin = 0;
+export const updateAdminSettingsBodyL2CommissionPercentMax = 100;
+
+export const updateAdminSettingsBodyL3CommissionPercentMin = 0;
+export const updateAdminSettingsBodyL3CommissionPercentMax = 100;
+
+export const updateAdminSettingsBodyReturnMultipleMin = 0;
+export const updateAdminSettingsBodyReturnMultipleMax = 100;
+
+export const updateAdminSettingsBodyCycleDaysMax = 365;
+
+export const updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMin = 0;
+export const updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMax = 1000;
+
+export const updateAdminSettingsBodyWithdrawalStartTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateAdminSettingsBodyWithdrawalEndTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateAdminSettingsBodyMaintenanceMessageMax = 500;
+
+export const updateAdminSettingsBodyAllowedDomainsItemMax = 253;
+
+export const updateAdminSettingsBodyAllowedDomainsMax = 50;
+
+export const updateAdminSettingsBodyAnnouncementTitleMax = 120;
+
+export const updateAdminSettingsBodyAnnouncementMessageMax = 2000;
+
 
 
 export const UpdateAdminSettingsBody = zod.object({
-  "brand": zod.string().min(1).optional(),
-  "currency": zod.string().optional(),
-  "supportHandle": zod.string().optional(),
-  "telegramUrl": zod.string().optional(),
-  "airtelNumber": zod.string().optional(),
-  "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional(),
-  "termsText": zod.string().max(updateAdminSettingsBodyTermsTextMax).optional()
+  "brand": zod.string().min(1),
+  "currency": zod.string(),
+  "supportHandle": zod.string(),
+  "telegramUrl": zod.string(),
+  "airtelNumber": zod.string(),
+  "mtnNumber": zod.string(),
+  "payeeName": zod.string(),
+  "termsText": zod.string().max(updateAdminSettingsBodyTermsTextMax),
+  "minDeposit": zod.number().min(updateAdminSettingsBodyMinDepositMin).max(updateAdminSettingsBodyMinDepositMax),
+  "minWithdrawal": zod.number().min(updateAdminSettingsBodyMinWithdrawalMin).max(updateAdminSettingsBodyMinWithdrawalMax),
+  "withdrawalMultiple": zod.number().min(updateAdminSettingsBodyWithdrawalMultipleMin).max(updateAdminSettingsBodyWithdrawalMultipleMax),
+  "welcomeBonus": zod.number().min(updateAdminSettingsBodyWelcomeBonusMin).max(updateAdminSettingsBodyWelcomeBonusMax),
+  "checkinBonus": zod.number().min(updateAdminSettingsBodyCheckinBonusMin).max(updateAdminSettingsBodyCheckinBonusMax),
+  "withdrawalFeePercent": zod.number().min(updateAdminSettingsBodyWithdrawalFeePercentMin).max(updateAdminSettingsBodyWithdrawalFeePercentMax),
+  "l1CommissionPercent": zod.number().min(updateAdminSettingsBodyL1CommissionPercentMin).max(updateAdminSettingsBodyL1CommissionPercentMax),
+  "l2CommissionPercent": zod.number().min(updateAdminSettingsBodyL2CommissionPercentMin).max(updateAdminSettingsBodyL2CommissionPercentMax),
+  "l3CommissionPercent": zod.number().min(updateAdminSettingsBodyL3CommissionPercentMin).max(updateAdminSettingsBodyL3CommissionPercentMax),
+  "returnMultiple": zod.number().min(updateAdminSettingsBodyReturnMultipleMin).max(updateAdminSettingsBodyReturnMultipleMax),
+  "cycleDays": zod.number().int().min(1).max(updateAdminSettingsBodyCycleDaysMax),
+  "maxWithdrawalsPerUserPerDay": zod.number().int().min(updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMin).max(updateAdminSettingsBodyMaxWithdrawalsPerUserPerDayMax),
+  "requirePlanBeforeWithdraw": zod.boolean(),
+  "restrictWithdrawalsToHours": zod.boolean(),
+  "withdrawalStartTime": zod.string().regex(updateAdminSettingsBodyWithdrawalStartTimeRegExp),
+  "withdrawalEndTime": zod.string().regex(updateAdminSettingsBodyWithdrawalEndTimeRegExp),
+  "requireReferralCode": zod.boolean(),
+  "maintenanceMode": zod.boolean(),
+  "maintenanceMessage": zod.string().max(updateAdminSettingsBodyMaintenanceMessageMax),
+  "openingCountdown": zod.boolean(),
+  "openingAt": zod.coerce.date().nullable(),
+  "allowedDomains": zod.array(zod.string().min(1).max(updateAdminSettingsBodyAllowedDomainsItemMax)).max(updateAdminSettingsBodyAllowedDomainsMax),
+  "announcementEnabled": zod.boolean(),
+  "announcementTitle": zod.string().max(updateAdminSettingsBodyAnnouncementTitleMax),
+  "announcementMessage": zod.string().max(updateAdminSettingsBodyAnnouncementMessageMax)
 })
 
 export const UpdateAdminSettingsResponse = zod.object({
   "brand": zod.string(),
   "currency": zod.string(),
-  "supportHandle": zod.string().optional(),
-  "telegramUrl": zod.string().optional(),
-  "airtelNumber": zod.string().optional(),
-  "mtnNumber": zod.string().optional(),
-  "payeeName": zod.string().optional(),
-  "termsText": zod.string().optional()
+  "supportHandle": zod.string(),
+  "telegramUrl": zod.string(),
+  "airtelNumber": zod.string(),
+  "mtnNumber": zod.string(),
+  "payeeName": zod.string(),
+  "termsText": zod.string(),
+  "minDeposit": zod.number(),
+  "minWithdrawal": zod.number(),
+  "withdrawalMultiple": zod.number(),
+  "welcomeBonus": zod.number(),
+  "checkinBonus": zod.number(),
+  "withdrawalFeePercent": zod.number(),
+  "l1CommissionPercent": zod.number(),
+  "l2CommissionPercent": zod.number(),
+  "l3CommissionPercent": zod.number(),
+  "returnMultiple": zod.number(),
+  "cycleDays": zod.number().int(),
+  "maxWithdrawalsPerUserPerDay": zod.number().int(),
+  "requirePlanBeforeWithdraw": zod.boolean(),
+  "restrictWithdrawalsToHours": zod.boolean(),
+  "withdrawalStartTime": zod.string(),
+  "withdrawalEndTime": zod.string(),
+  "requireReferralCode": zod.boolean(),
+  "maintenanceMode": zod.boolean(),
+  "maintenanceMessage": zod.string(),
+  "openingCountdown": zod.boolean(),
+  "openingAt": zod.coerce.date().nullable(),
+  "allowedDomains": zod.array(zod.string()),
+  "announcementEnabled": zod.boolean(),
+  "announcementTitle": zod.string(),
+  "announcementMessage": zod.string()
 })
 
 

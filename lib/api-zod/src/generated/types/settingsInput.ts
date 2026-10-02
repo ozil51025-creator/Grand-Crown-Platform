@@ -8,13 +8,97 @@
 
 export interface SettingsInput {
   /** @minLength 1 */
-  brand?: string;
-  currency?: string;
-  supportHandle?: string;
-  telegramUrl?: string;
-  airtelNumber?: string;
-  mtnNumber?: string;
-  payeeName?: string;
+  brand: string;
+  currency: string;
+  supportHandle: string;
+  telegramUrl: string;
+  airtelNumber: string;
+  mtnNumber: string;
+  payeeName: string;
   /** @maxLength 20000 */
-  termsText?: string;
+  termsText: string;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  minDeposit: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  minWithdrawal: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  withdrawalMultiple: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  welcomeBonus: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  checkinBonus: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  withdrawalFeePercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l1CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l2CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l3CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  returnMultiple: number;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  cycleDays: number;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  maxWithdrawalsPerUserPerDay: number;
+  requirePlanBeforeWithdraw: boolean;
+  restrictWithdrawalsToHours: boolean;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  withdrawalStartTime: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  withdrawalEndTime: string;
+  requireReferralCode: boolean;
+  maintenanceMode: boolean;
+  /** @maxLength 500 */
+  maintenanceMessage: string;
+  openingCountdown: boolean;
+  /** @nullable */
+  openingAt: Date | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 253
+     */
+  allowedDomains: string[];
+  announcementEnabled: boolean;
+  /** @maxLength 120 */
+  announcementTitle: string;
+  /** @maxLength 2000 */
+  announcementMessage: string;
 }

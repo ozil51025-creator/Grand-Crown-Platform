@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Settings {
+export interface PublicSettings {
   brand: string;
   currency: string;
   supportHandle: string;
@@ -37,7 +37,6 @@ export interface Settings {
   openingCountdown: boolean;
   /** @nullable */
   openingAt: Date | null;
-  allowedDomains: string[];
   announcementEnabled: boolean;
   announcementTitle: string;
   announcementMessage: string;

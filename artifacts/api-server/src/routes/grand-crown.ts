@@ -112,7 +112,32 @@ type Settings = {
   airtelNumber: string;
   mtnNumber: string;
   payeeName: string;
-  termsText?: string;
+  termsText: string;
+  minDeposit: number;
+  minWithdrawal: number;
+  withdrawalMultiple: number;
+  welcomeBonus: number;
+  checkinBonus: number;
+  withdrawalFeePercent: number;
+  l1CommissionPercent: number;
+  l2CommissionPercent: number;
+  l3CommissionPercent: number;
+  returnMultiple: number;
+  cycleDays: number;
+  maxWithdrawalsPerUserPerDay: number;
+  requirePlanBeforeWithdraw: boolean;
+  restrictWithdrawalsToHours: boolean;
+  withdrawalStartTime: string;
+  withdrawalEndTime: string;
+  requireReferralCode: boolean;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  openingCountdown: boolean;
+  openingAt: string | null;
+  allowedDomains: string[];
+  announcementEnabled: boolean;
+  announcementTitle: string;
+  announcementMessage: string;
 };
 
 export type Data = {
@@ -153,6 +178,31 @@ const defaultSettings: Settings = {
   mtnNumber: "0764312328",
   payeeName: "Nakaliiba Martha",
   termsText: "",
+  minDeposit: 500,
+  minWithdrawal: 7000,
+  withdrawalMultiple: 0,
+  welcomeBonus: 1000,
+  checkinBonus: 50,
+  withdrawalFeePercent: 12,
+  l1CommissionPercent: 25,
+  l2CommissionPercent: 2,
+  l3CommissionPercent: 1,
+  returnMultiple: 2,
+  cycleDays: 1,
+  maxWithdrawalsPerUserPerDay: 0,
+  requirePlanBeforeWithdraw: true,
+  restrictWithdrawalsToHours: false,
+  withdrawalStartTime: "06:00",
+  withdrawalEndTime: "17:00",
+  requireReferralCode: false,
+  maintenanceMode: false,
+  maintenanceMessage: "We’re performing maintenance. Please check back shortly.",
+  openingCountdown: false,
+  openingAt: null,
+  allowedDomains: [],
+  announcementEnabled: false,
+  announcementTitle: "Grand Crown update",
+  announcementMessage: "",
 };
 
 const dataFile = path.resolve(

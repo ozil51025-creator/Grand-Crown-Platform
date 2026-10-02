@@ -5,9 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SessionResponseAccessMode } from './sessionResponseAccessMode';
 import type { User } from './user';
 
 export interface SessionResponse {
   loggedIn: boolean;
   user?: User | null;
+  accessMode: SessionResponseAccessMode;
+  accessMessage: string;
+  /** @nullable */
+  openingAt: Date | null;
 }

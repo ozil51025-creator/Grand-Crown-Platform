@@ -46,6 +46,7 @@ import type {
   PaymentResponse,
   Product,
   ProductInput,
+  PublicSettings,
   Purchase,
   ReferralOverview,
   RegisterInput,
@@ -174,9 +175,9 @@ export const getGetSettingsUrl = () => {
   return `/api/settings`
 }
 
-export const getSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<Settings> => {
+export const getSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublicSettings> => {
 
-  return customFetch<Settings>(getGetSettingsUrl(),
+  return customFetch<PublicSettings>(getGetSettingsUrl(),
   {
     ...options,
     method: 'GET'

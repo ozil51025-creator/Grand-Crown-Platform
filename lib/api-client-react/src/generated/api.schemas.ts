@@ -76,25 +76,171 @@ export interface HealthStatus {
 export interface Settings {
   brand: string;
   currency: string;
-  supportHandle?: string;
-  telegramUrl?: string;
-  airtelNumber?: string;
-  mtnNumber?: string;
-  payeeName?: string;
-  termsText?: string;
+  supportHandle: string;
+  telegramUrl: string;
+  airtelNumber: string;
+  mtnNumber: string;
+  payeeName: string;
+  termsText: string;
+  minDeposit: number;
+  minWithdrawal: number;
+  withdrawalMultiple: number;
+  welcomeBonus: number;
+  checkinBonus: number;
+  withdrawalFeePercent: number;
+  l1CommissionPercent: number;
+  l2CommissionPercent: number;
+  l3CommissionPercent: number;
+  returnMultiple: number;
+  cycleDays: number;
+  maxWithdrawalsPerUserPerDay: number;
+  requirePlanBeforeWithdraw: boolean;
+  restrictWithdrawalsToHours: boolean;
+  withdrawalStartTime: string;
+  withdrawalEndTime: string;
+  requireReferralCode: boolean;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  openingCountdown: boolean;
+  /** @nullable */
+  openingAt: string | null;
+  allowedDomains: string[];
+  announcementEnabled: boolean;
+  announcementTitle: string;
+  announcementMessage: string;
+}
+
+export interface PublicSettings {
+  brand: string;
+  currency: string;
+  supportHandle: string;
+  telegramUrl: string;
+  airtelNumber: string;
+  mtnNumber: string;
+  payeeName: string;
+  termsText: string;
+  minDeposit: number;
+  minWithdrawal: number;
+  withdrawalMultiple: number;
+  welcomeBonus: number;
+  checkinBonus: number;
+  withdrawalFeePercent: number;
+  l1CommissionPercent: number;
+  l2CommissionPercent: number;
+  l3CommissionPercent: number;
+  returnMultiple: number;
+  cycleDays: number;
+  maxWithdrawalsPerUserPerDay: number;
+  requirePlanBeforeWithdraw: boolean;
+  restrictWithdrawalsToHours: boolean;
+  withdrawalStartTime: string;
+  withdrawalEndTime: string;
+  requireReferralCode: boolean;
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  openingCountdown: boolean;
+  /** @nullable */
+  openingAt: string | null;
+  announcementEnabled: boolean;
+  announcementTitle: string;
+  announcementMessage: string;
 }
 
 export interface SettingsInput {
   /** @minLength 1 */
-  brand?: string;
-  currency?: string;
-  supportHandle?: string;
-  telegramUrl?: string;
-  airtelNumber?: string;
-  mtnNumber?: string;
-  payeeName?: string;
+  brand: string;
+  currency: string;
+  supportHandle: string;
+  telegramUrl: string;
+  airtelNumber: string;
+  mtnNumber: string;
+  payeeName: string;
   /** @maxLength 20000 */
-  termsText?: string;
+  termsText: string;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  minDeposit: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  minWithdrawal: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  withdrawalMultiple: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  welcomeBonus: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     */
+  checkinBonus: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  withdrawalFeePercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l1CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l2CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  l3CommissionPercent: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  returnMultiple: number;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  cycleDays: number;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     */
+  maxWithdrawalsPerUserPerDay: number;
+  requirePlanBeforeWithdraw: boolean;
+  restrictWithdrawalsToHours: boolean;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  withdrawalStartTime: string;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  withdrawalEndTime: string;
+  requireReferralCode: boolean;
+  maintenanceMode: boolean;
+  /** @maxLength 500 */
+  maintenanceMessage: string;
+  openingCountdown: boolean;
+  /** @nullable */
+  openingAt: string | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 253
+     */
+  allowedDomains: string[];
+  announcementEnabled: boolean;
+  /** @maxLength 120 */
+  announcementTitle: string;
+  /** @maxLength 2000 */
+  announcementMessage: string;
 }
 
 export interface Product {
@@ -191,9 +337,22 @@ export interface AuthResponse {
   user: User;
 }
 
+export type SessionResponseAccessMode = typeof SessionResponseAccessMode[keyof typeof SessionResponseAccessMode];
+
+
+export const SessionResponseAccessMode = {
+  available: 'available',
+  maintenance: 'maintenance',
+  opening: 'opening',
+} as const;
+
 export interface SessionResponse {
   loggedIn: boolean;
   user?: User | null;
+  accessMode: SessionResponseAccessMode;
+  accessMessage: string;
+  /** @nullable */
+  openingAt: string | null;
 }
 
 export interface OkResponse {
