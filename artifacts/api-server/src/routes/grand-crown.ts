@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { UpdateAdminSettingsBody } from "@workspace/api-zod";
+import { ReviewPaymentBody, SubmitPaymentBody, UpdateAdminSettingsBody } from "@workspace/api-zod";
 import { registerAccountRoutes, type StoredGiftCode } from "./account";
 
 type Product = {
@@ -191,7 +191,7 @@ const defaultSettings: Settings = {
   cycleDays: 1,
   maxWithdrawalsPerUserPerDay: 0,
   requirePlanBeforeWithdraw: true,
-  restrictWithdrawalsToHours: false,
+  restrictWithdrawalsToHours: true,
   withdrawalStartTime: "10:00",
   withdrawalEndTime: "17:00",
   requireReferralCode: false,
@@ -249,10 +249,10 @@ function readData(): Data {
         ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
         ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
         ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
-        ...(rawSettings.withdrawalFeePercent !== defaultSettings.withdrawalFeePercent
-          ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent }
+        ...(rawSettings.withdrawalFeePercent === 12 ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent } : {}),
+        ...(rawSettings.withdrawalStartTime === "06:00"
+          ? { withdrawalStartTime: defaultSettings.withdrawalStartTime, restrictWithdrawalsToHours: true }
           : {}),
-        ...(rawSettings.withdrawalStartTime === "06:00" ? { withdrawalStartTime: defaultSettings.withdrawalStartTime } : {}),
       },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
       users: Array.isArray(raw.users)
@@ -842,28 +842,31 @@ router.post("/payments", (req, res) => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
-  const amount = bodyNumber(req, "amount");
-  const method = bodyString(req, "method");
-  const payerPhone = bodyString(req, "payerPhone");
-  const payerReference = bodyString(req, "payerReference");
+  const parsed = SubmitPaymentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { amount, method, payerPhone, payerReference } = parsed.data;
   if (!["MTN Mobile Money", "Airtel Money"].includes(method)) {
-    return void res.status(400).json({ error: "Choose MTN Mobile Money or Airtel Money" });
+    res.status(400).json({ error: "Choose MTN Mobile Money or Airtel Money" });
+    return;
   }
   if (!normalizeUgandaPhone(payerPhone)) {
-    return void res.status(400).json({ error: "Enter a valid Ugandan mobile number" });
+    res.status(400).json({ error: "Enter a valid Ugandan mobile number" });
+    return;
   }
   if (!Number.isSafeInteger(amount) || amount < data.settings.minDeposit) {
-    return void res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
-  }
-  if (payerReference.length < 3 || payerReference.length > 80) {
-    return void res.status(400).json({ error: "Enter the mobile-money transaction reference from your receipt" });
+    res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
+    return;
   }
   const normalizedReference = payerReference.replace(/\s+/g, "").toUpperCase();
   const referenceUsed = data.payments.some(
     (item) => item.payerReference?.replace(/\s+/g, "").toUpperCase() === normalizedReference,
   );
   if (referenceUsed) {
-    return void res.status(409).json({ error: "That transaction reference has already been submitted" });
+    res.status(409).json({ error: "That transaction reference has already been submitted" });
+    return;
   }
   const transactionId = `GC-${crypto.randomBytes(12).toString("hex").toUpperCase()}`;
   const payment: Payment = {
@@ -880,7 +883,7 @@ router.post("/payments", (req, res) => {
   data.payments.push(payment);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_initiated", createdAt: now() });
   writeData(data);
-  return res.status(201).json({ ok: true, paymentId: payment.id, status: payment.status, payment });
+  res.status(201).json({ ok: true, paymentId: payment.id, status: payment.status, payment });
 });
 
 router.get("/purchases", (req, res) => {
@@ -1201,28 +1204,46 @@ router.get("/admin/payments", (req, res) => {
 router.put("/admin/payments/:id", (req, res) => {
   if (!requireAdmin(req, res)) return;
   const data = readData();
-  const payment = data.payments.find((item) => item.id === req.params.id);
-  const action = bodyString(req, "action");
-  if (!payment) return res.status(404).json({ error: "Payment not found" });
-  if (payment.status !== "pending") return res.status(409).json({ error: "Deposit already reviewed" });
-  if (action !== "approve" && action !== "reject") {
-    return res.status(400).json({ error: "Invalid review action" });
+  const rawId = req.params.id;
+  const paymentId = Array.isArray(rawId) ? rawId[0] : rawId;
+  const payment = data.payments.find((item) => item.id === paymentId);
+  const parsed = ReviewPaymentBody.safeParse(req.body);
+  if (!payment) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
   }
-  payment.reviewedAt = now();
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const action = parsed.data.action;
+  if (payment.status !== "pending") {
+    res.status(409).json({ error: "Deposit already reviewed" });
+    return;
+  }
+  if (action === "approve" && !payment.payerReference) {
+    res.status(400).json({ error: "This deposit has no transfer reference and cannot be approved" });
+    return;
+  }
   if (action === "approve") {
     const user = data.users.find((item) => item.id === payment.userId);
-    if (!user) return res.status(404).json({ error: "Member account no longer exists" });
+    if (!user) {
+      res.status(404).json({ error: "Member account no longer exists" });
+      return;
+    }
+    payment.reviewedAt = now();
     payment.status = "approved";
     payment.settledAt = payment.reviewedAt;
     user.depositBalance += payment.amount;
     addTransaction(data, payment.userId, "deposit_credit", payment.amount, { paymentId: payment.id });
     data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_approved", createdAt: payment.reviewedAt });
   } else {
+    payment.reviewedAt = now();
     payment.status = "rejected";
     data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_rejected", createdAt: payment.reviewedAt });
   }
   writeData(data);
-  return res.json({ ok: true, status: payment.status, payment });
+  res.json({ ok: true, paymentId: payment.id, status: payment.status, payment });
 });
 router.get("/admin/withdrawals", (req, res) => {
   if (!requireAdmin(req, res)) return;
