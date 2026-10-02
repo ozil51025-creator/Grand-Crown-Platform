@@ -184,7 +184,7 @@ const defaultSettings: Settings = {
   withdrawalMultiple: 0,
   welcomeBonus: 1000,
   checkinBonus: 50,
-  withdrawalFeePercent: 10,
+  withdrawalFeePercent: 15,
   l1CommissionPercent: 10,
   // Four keeps current plan payouts unchanged (the largest existing plan is 3.75x).
   returnMultiple: 4,
@@ -249,7 +249,9 @@ function readData(): Data {
         ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
         ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
         ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
-        ...(rawSettings.withdrawalFeePercent === 12 ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent } : {}),
+        ...(rawSettings.withdrawalFeePercent !== defaultSettings.withdrawalFeePercent
+          ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent }
+          : {}),
         ...(rawSettings.withdrawalStartTime === "06:00" ? { withdrawalStartTime: defaultSettings.withdrawalStartTime } : {}),
       },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
