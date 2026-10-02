@@ -163,17 +163,24 @@ function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const login = useLoginUser();
   const register = useRegisterUser();
   const memberSettings = useGetSettings();
   const { toast } = useToast();
+  const passwordsMismatch = mode === 'register' && confirmPassword.length > 0 && password !== confirmPassword;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const onSuccess = () => { queryClient.invalidateQueries(); toast({ title: mode === 'login' ? 'Welcome back' : 'Your account is ready', description: 'Opening your Grand Crown circle.' }); };
     if (mode === 'login') login.mutate({ data: { phone, password } }, { onSuccess });
+    else if (password !== confirmPassword) return;
     else register.mutate({ data: { phone, password, referralCode: referralCode || undefined } }, { onSuccess });
+  };
+  const toggleMode = () => {
+    setConfirmPassword('');
+    setMode(mode === 'login' ? 'register' : 'login');
   };
   const pending = login.isPending || register.isPending;
   return <AuthLayout
@@ -184,11 +191,15 @@ function AuthPage() {
     form={<form onSubmit={submit}>
       <AuthField label="Mobile number" icon={Phone} autoComplete="tel" data-testid="input-phone" type="tel" placeholder="07xx xxx xxx" value={phone} onChange={e => setPhone(e.target.value)} required minLength={7} />
       <AuthField label="Password" icon={LockKeyhole} data-testid="input-password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+      <AuthReveal show={mode === 'register'}>
+        <AuthField label="Confirm password" icon={LockKeyhole} data-testid="input-confirm-password" type="password" autoComplete="new-password" placeholder="Re-enter your password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required minLength={8} maxLength={128} />
+        {passwordsMismatch && <p data-testid="status-password-mismatch" role="alert" className="text-sm text-destructive">Passwords do not match.</p>}
+      </AuthReveal>
       <AuthReveal show={mode === 'register'}><AuthField label={`Referral code${memberSettings.data?.requireReferralCode ? ' (required)' : ' (optional)'}`} icon={Link2} data-testid="input-referral-code" placeholder="e.g. GC-4L8P" value={referralCode} onChange={e => setReferralCode(e.target.value)} required={mode === 'register' && !!memberSettings.data?.requireReferralCode} /></AuthReveal>
       {!!(login.error || register.error) && <p data-testid="status-auth-error" role="alert" className="text-sm text-destructive">We couldn't verify those details. Please try again.</p>}
       <Button data-testid="button-submit-auth" type="submit" className="liquid-submit mt-2 min-h-12 w-full rounded-2xl" disabled={pending}>{pending ? 'Checking details…' : mode === 'login' ? 'Login' : 'Sign up'}<ArrowUpRight className="size-4" /></Button>
     </form>}
-    toggle={<button type="button" data-testid="button-toggle-auth-mode" onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="mt-6 w-full rounded-lg text-center text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">{mode === 'login' ? "Don't have an account? " : 'Already have an account? '}<span className="font-bold text-primary">{mode === 'login' ? 'Sign up' : 'Login'}</span></button>}
+    toggle={<button type="button" data-testid="button-toggle-auth-mode" onClick={toggleMode} className="mt-6 w-full rounded-lg text-center text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">{mode === 'login' ? "Don't have an account? " : 'Already have an account? '}<span className="font-bold text-primary">{mode === 'login' ? 'Sign up' : 'Login'}</span></button>}
   />;
 }
 
