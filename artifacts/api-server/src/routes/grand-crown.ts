@@ -758,8 +758,8 @@ function generateReferralCode(users: User[]): string | undefined {
   return undefined;
 }
 
-router.post("/auth/register", (req, res) => {
-  const data = readData();
+router.post("/auth/register", async (req, res) => {
+  const data = await readData();
   const access = getAccessStatus(data.settings);
   if (access.mode !== "available") {
     return res.status(503).json({ error: access.message, accessMode: access.mode, openingAt: access.openingAt });
@@ -803,18 +803,23 @@ router.post("/auth/register", (req, res) => {
   data.users.push(user);
   addTransaction(data, user.id, "signup_bonus", data.settings.welcomeBonus);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "signup", createdAt: now() });
-  writeData(data);
   const token = crypto.randomBytes(32).toString("hex");
-  userSessions.set(token, { userId: user.id, expiresAt: Date.now() + sessionTtl });
+  data.sessions.push({
+    kind: "user",
+    tokenHash: sessionTokenHash(token),
+    userId: user.id,
+    expiresAt: Date.now() + sessionTtl,
+  });
+  await writeData(data);
   setCookie(res, "gc_user", token, sessionTtl / 1000);
   return res.status(201).json({ ok: true, user: publicUser(user) });
 });
 
-router.post("/auth/login", (req, res) => {
+router.post("/auth/login", async (req, res) => {
   if (rateLimited(req, "user-login", 8)) {
     return res.status(429).json({ error: "Too many login attempts. Try again later." });
   }
-  const data = readData();
+  const data = await readData();
   const access = getAccessStatus(data.settings);
   if (access.mode !== "available") {
     return res.status(503).json({ error: access.message, accessMode: access.mode, openingAt: access.openingAt });
@@ -824,20 +829,31 @@ router.post("/auth/login", (req, res) => {
     return res.status(401).json({ error: "Invalid phone or password" });
   }
   const token = crypto.randomBytes(32).toString("hex");
-  userSessions.set(token, { userId: user.id, expiresAt: Date.now() + sessionTtl });
+  data.sessions.push({
+    kind: "user",
+    tokenHash: sessionTokenHash(token),
+    userId: user.id,
+    expiresAt: Date.now() + sessionTtl,
+  });
+  await writeData(data);
   setCookie(res, "gc_user", token, sessionTtl / 1000);
   return res.json({ ok: true, user: publicUser(user) });
 });
 
-router.post("/auth/logout", (req, res) => {
+router.post("/auth/logout", async (req, res) => {
   const token = cookieValue(req, "gc_user");
-  if (token) userSessions.delete(token);
+  if (token) {
+    const data = await readData();
+    const tokenHash = sessionTokenHash(token);
+    data.sessions = data.sessions.filter((session) => session.tokenHash !== tokenHash);
+    await writeData(data);
+  }
   setCookie(res, "gc_user", "", 0);
   return res.json({ ok: true });
 });
 
-router.get("/auth/me", (req, res) => {
-  const data = readData();
+router.get("/auth/me", async (req, res) => {
+  const data = await readData();
   const access = getAccessStatus(data.settings);
   if (access.mode !== "available") {
     return res.json({
@@ -858,9 +874,9 @@ router.get("/auth/me", (req, res) => {
   });
 });
 
-router.get("/dashboard", (req, res) => {
-  const data = readData();
-  processEarnings(data);
+router.get("/dashboard", async (req, res) => {
+  const data = await readData();
+  await processEarnings(data);
   const user = requireUser(req, res, data);
   if (!user) return;
   const purchases = activePurchases(data, user.id);
@@ -875,8 +891,8 @@ router.get("/dashboard", (req, res) => {
   });
 });
 
-router.post("/checkin", (req, res) => {
-  const data = readData();
+router.post("/checkin", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const today = ugandaDateKey();
@@ -886,12 +902,12 @@ router.post("/checkin", (req, res) => {
   user.wallet += reward;
   user.totalEarned += reward;
   addTransaction(data, user.id, "checkin", reward);
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true, reward, user: publicUser(user) });
 });
 
-router.get("/referral", (req, res) => {
-  const data = readData();
+router.get("/referral", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const direct = data.users.filter((item) => item.referredBy === user.id);
@@ -919,15 +935,15 @@ router.get("/referral", (req, res) => {
   });
 });
 
-router.get("/payments", (req, res) => {
-  const data = readData();
+router.get("/payments", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   return res.json(data.payments.filter((payment) => payment.userId === user.id).slice().reverse());
 });
 
-router.get("/payments/:id", (req, res) => {
-  const data = readData();
+router.get("/payments/:id", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const payment = data.payments.find((item) => item.id === req.params.id && item.userId === user.id);
@@ -938,8 +954,8 @@ router.get("/payments/:id", (req, res) => {
   res.json(payment);
 });
 
-router.post("/payments", (req, res) => {
-  const data = readData();
+router.post("/payments", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const parsed = SubmitPaymentBody.safeParse(req.body);
@@ -982,19 +998,19 @@ router.post("/payments", (req, res) => {
   };
   data.payments.push(payment);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "deposit_initiated", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   res.status(201).json({ ok: true, paymentId: payment.id, status: payment.status, payment });
 });
 
-router.get("/purchases", (req, res) => {
-  const data = readData();
+router.get("/purchases", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   return res.json(data.purchases.filter((purchase) => purchase.userId === user.id));
 });
 
-router.post("/purchases", (req, res) => {
-  const data = readData();
+router.post("/purchases", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const productId = bodyString(req, "productId");
@@ -1021,19 +1037,19 @@ router.post("/purchases", (req, res) => {
   addTransaction(data, user.id, "product_purchase", -product.price, { purchaseId: purchase.id });
   applyReferralCommissions(data, user, purchase);
   data.activity.push({ id: id("ACT"), userId: user.id, type: "product_purchased", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.status(201).json(purchase);
 });
 
-router.get("/withdrawals", (req, res) => {
-  const data = readData();
+router.get("/withdrawals", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   return res.json(data.withdrawals.filter((withdrawal) => withdrawal.userId === user.id));
 });
 
-router.post("/withdrawals", (req, res) => {
-  const data = readData();
+router.post("/withdrawals", async (req, res) => {
+  const data = await readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const amount = bodyNumber(req, "amount");
@@ -1084,7 +1100,7 @@ router.post("/withdrawals", (req, res) => {
   user.wallet -= amount;
   data.withdrawals.push(withdrawal);
   addTransaction(data, user.id, "withdrawal_hold", -amount, { withdrawalId: withdrawal.id });
-  writeData(data);
+  await writeData(data);
   return res.status(201).json({ ok: true, withdrawal });
 });
 
