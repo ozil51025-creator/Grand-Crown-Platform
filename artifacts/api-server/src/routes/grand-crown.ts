@@ -63,6 +63,7 @@ type Payment = {
   amount: number;
   method: string;
   payerPhone: string;
+  payerReference?: string;
   transactionId: string;
   providerTransactionId?: string;
   providerRequestStartedAt?: string;
@@ -122,8 +123,6 @@ type Settings = {
   checkinBonus: number;
   withdrawalFeePercent: number;
   l1CommissionPercent: number;
-  l2CommissionPercent: number;
-  l3CommissionPercent: number;
   returnMultiple: number;
   cycleDays: number;
   maxWithdrawalsPerUserPerDay: number;
@@ -180,22 +179,20 @@ const defaultSettings: Settings = {
   mtnNumber: "0764312328",
   payeeName: "Nakaliiba Martha",
   termsText: "",
-  minDeposit: 500,
-  minWithdrawal: 7000,
+  minDeposit: 19000,
+  minWithdrawal: 3000,
   withdrawalMultiple: 0,
   welcomeBonus: 1000,
   checkinBonus: 50,
   withdrawalFeePercent: 12,
-  l1CommissionPercent: 25,
-  l2CommissionPercent: 2,
-  l3CommissionPercent: 1,
+  l1CommissionPercent: 10,
   // Four keeps current plan payouts unchanged (the largest existing plan is 3.75x).
   returnMultiple: 4,
   cycleDays: 1,
   maxWithdrawalsPerUserPerDay: 0,
   requirePlanBeforeWithdraw: true,
   restrictWithdrawalsToHours: false,
-  withdrawalStartTime: "06:00",
+  withdrawalStartTime: "10:00",
   withdrawalEndTime: "17:00",
   requireReferralCode: false,
   maintenanceMode: false,
@@ -233,8 +230,27 @@ function id(prefix: string) {
 function readData(): Data {
   try {
     const raw = JSON.parse(fs.readFileSync(dataFile, "utf8")) as Partial<Data>;
+    const rawSettings = (raw.settings ?? {}) as Settings & {
+      l2CommissionPercent?: number;
+      l3CommissionPercent?: number;
+    };
+    const hasLegacyReferralLevels =
+      rawSettings.l2CommissionPercent !== undefined ||
+      rawSettings.l3CommissionPercent !== undefined;
+    const {
+      l2CommissionPercent: _legacyLevelTwo,
+      l3CommissionPercent: _legacyLevelThree,
+      ...savedSettings
+    } = rawSettings;
     return {
-      settings: { ...defaultSettings, ...(raw.settings ?? {}) },
+      settings: {
+        ...defaultSettings,
+        ...savedSettings,
+        ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
+        ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
+        ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
+        ...(rawSettings.withdrawalStartTime === "06:00" ? { withdrawalStartTime: defaultSettings.withdrawalStartTime } : {}),
+      },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
       users: Array.isArray(raw.users)
         ? raw.users.map((user) => ({
@@ -560,54 +576,23 @@ function processEarnings(data: Data) {
 }
 
 function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
-  const rates = [
-    data.settings.l1CommissionPercent,
-    data.settings.l2CommissionPercent,
-    data.settings.l3CommissionPercent,
-  ].map((rate) => rate / 100);
-  const seen = new Set([buyer.id]);
-  let referrerId = buyer.referredBy;
-  for (let index = 0; index < rates.length && referrerId; index += 1) {
-    if (seen.has(referrerId)) break;
-    seen.add(referrerId);
-    const referrer = data.users.find((user) => user.id === referrerId);
-    if (!referrer) break;
-    const level = index + 1;
-    const exists = data.transactions.some(
-      (transaction) =>
-        transaction.type === "referral_commission" &&
-        transaction.purchaseId === purchase.id &&
-        transaction.userId === referrer.id &&
-        transaction.level === level,
-    );
-    if (!exists) {
-      const commission = Math.round(purchase.amount * rates[index]);
-      referrer.wallet += commission;
-      referrer.totalEarned += commission;
-      addTransaction(data, referrer.id, "referral_commission", commission, {
-        purchaseId: purchase.id,
-        level,
-      });
-    }
-    referrerId = referrer.referredBy;
-  }
-}
-
-type PesaJetTransaction = {
-  transactionId: string;
-  reference: string;
-  amount: number;
-  currency: string;
-  status: string;
-  provider?: string;
-  type?: string;
-};
-
-class PesaJetRequestError extends Error {
-  constructor(message: string, readonly statusCode?: number) {
-    super(message);
-    this.name = "PesaJetRequestError";
-  }
+  const referrer = data.users.find((user) => user.id === buyer.referredBy);
+  if (!referrer) return;
+  const exists = data.transactions.some(
+    (transaction) =>
+      transaction.type === "referral_commission" &&
+      transaction.purchaseId === purchase.id &&
+      transaction.userId === referrer.id &&
+      transaction.level === 1,
+  );
+  if (exists) return;
+  const commission = Math.round(purchase.amount * (data.settings.l1CommissionPercent / 100));
+  referrer.wallet += commission;
+  referrer.totalEarned += commission;
+  addTransaction(data, referrer.id, "referral_commission", commission, {
+    purchaseId: purchase.id,
+    level: 1,
+  });
 }
 
 function normalizeUgandaPhone(value: string) {
@@ -618,106 +603,6 @@ function normalizeUgandaPhone(value: string) {
       ? `+${digits}`
       : digits;
   return /^\+256[0-9]{9}$/.test(international) ? international : undefined;
-}
-
-function paymentProvider(method: string) {
-  if (method === "MTN Mobile Money") return "mtn";
-  if (method === "Airtel Money") return "airtel";
-  return undefined;
-}
-
-async function pesajetRequest<T>(pathname: string, init: RequestInit = {}): Promise<T> {
-  const apiKey = process.env["PESAJET_API_KEY"];
-  if (!apiKey) throw new PesaJetRequestError("PesaJet is not configured", 503);
-  let response: globalThis.Response;
-  try {
-    response = await fetch(`https://payments.pesajet.com/api/v1${pathname}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-        ...init.headers,
-      },
-      signal: AbortSignal.timeout(20_000),
-    });
-  } catch {
-    throw new PesaJetRequestError("PesaJet could not be reached");
-  }
-  const body = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throw new PesaJetRequestError(`PesaJet rejected the request (${response.status})`, response.status);
-  }
-  return body as T;
-}
-
-function createPesaJetCollection(payment: Payment, provider: "mtn" | "airtel") {
-  const phoneNumber = normalizeUgandaPhone(payment.payerPhone);
-  if (!phoneNumber) throw new PesaJetRequestError("Enter a valid Ugandan mobile number", 400);
-  return pesajetRequest<PesaJetTransaction>("/payments", {
-    method: "POST",
-    headers: { "Idempotency-Key": payment.transactionId },
-    body: JSON.stringify({
-      type: "COLLECTION",
-      amount: payment.amount,
-      currency: "UGX",
-      phoneNumber,
-      provider,
-      reference: payment.transactionId,
-      description: "Grand Crown account deposit",
-      metadata: { paymentId: payment.id },
-    }),
-  });
-}
-
-function applyVerifiedProviderTransaction(
-  data: Data,
-  payment: Payment,
-  transaction: PesaJetTransaction,
-  expectedProvider: "mtn" | "airtel",
-) {
-  if (
-    !transaction ||
-    typeof transaction.transactionId !== "string" ||
-    transaction.reference !== payment.transactionId ||
-    Number(transaction.amount) !== payment.amount ||
-    transaction.currency !== "UGX" ||
-    (typeof transaction.provider !== "string" || transaction.provider.toLowerCase() !== expectedProvider) ||
-    (transaction.type && transaction.type.toUpperCase() !== "COLLECTION") ||
-    (payment.providerTransactionId && transaction.transactionId !== payment.providerTransactionId)
-  ) {
-    throw new PesaJetRequestError("PesaJet transaction did not match this payment");
-  }
-  payment.providerTransactionId = transaction.transactionId;
-  if (payment.status !== "pending") return;
-
-  const providerStatus = transaction.status.toUpperCase();
-  if (providerStatus === "COMPLETED") {
-    const user = data.users.find((item) => item.id === payment.userId);
-    if (!user) throw new PesaJetRequestError("Payment account no longer exists");
-    payment.status = "completed";
-    payment.settledAt = now();
-    user.depositBalance += payment.amount;
-    addTransaction(data, payment.userId, "deposit_credit", payment.amount, { paymentId: payment.id });
-    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_completed", createdAt: payment.settledAt });
-  } else if (providerStatus === "FAILED") {
-    payment.status = "failed";
-    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_failed", createdAt: now() });
-  } else if (providerStatus === "EXPIRED") {
-    payment.status = "expired";
-    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "payment_expired", createdAt: now() });
-  }
-}
-
-function verifyPesaJetWebhook(payload: Record<string, unknown>, headerSignature: string) {
-  const secret = process.env["PESAJET_WEBHOOK_SECRET"];
-  if (!secret) return false;
-  const { signature: payloadSignature, ...unsignedPayload } = payload;
-  const supplied = headerSignature || (typeof payloadSignature === "string" ? payloadSignature : "");
-  if (!/^[a-f0-9]{64}$/i.test(supplied)) return false;
-  const expected = crypto.createHmac("sha256", secret).update(JSON.stringify(unsignedPayload)).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "utf8");
-  const suppliedBuffer = Buffer.from(supplied, "utf8");
-  return expectedBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
 const router: IRouter = Router();
