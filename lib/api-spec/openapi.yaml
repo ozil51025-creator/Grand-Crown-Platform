@@ -390,6 +390,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserActionResponse"
+  /admin/users/{id}/password:
+    post:
+      operationId: resetUserPassword
+      tags: [admin]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetUserPasswordInput"
+      responses:
+        "200":
+          description: Member password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
   /admin/users/{id}:
     delete:
       operationId: deleteUser
@@ -932,6 +951,11 @@ components:
       properties:
         banned: { type: boolean }
       required: [banned]
+    ResetUserPasswordInput:
+      type: object
+      properties:
+        password: { type: string, minLength: 8, maxLength: 128 }
+      required: [password]
     UserActionResponse:
       type: object
       properties:
