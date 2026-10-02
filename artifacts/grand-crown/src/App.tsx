@@ -593,6 +593,7 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const activity = useGetAdminActivity();
   const settings = useGetAdminSettings();
   const adminAccounts = useGetAdminAdmins();
+  const reviewPayment = useReviewPayment();
   const reviewWithdrawal = useReviewWithdrawal();
   const creditUser = useCreditUser();
   const debitUser = useDebitUser();
@@ -611,6 +612,21 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   const [adminForm, setAdminForm] = useState({ username: '', password: '' });
   const { toast } = useToast();
   const approveWithdrawal = (id: string, action: 'approve' | 'reject') => reviewWithdrawal.mutate({ id, data: { action } }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: `Withdrawal ${action}d`, description: 'The withdrawal queue has been updated.' }); } });
+  const reviewDeposit = (id: string, action: 'approve' | 'reject') => {
+    const confirmation = action === 'approve'
+      ? 'Approve this deposit only after the mobile-money transaction reference is verified in the MTN or Airtel payment record. Product funds will be credited.'
+      : 'Reject this deposit? No product funds will be credited.';
+    if (!window.confirm(confirmation)) return;
+    reviewPayment.mutate({ id, data: { action } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        toast({
+          title: action === 'approve' ? 'Deposit approved' : 'Deposit rejected',
+          description: action === 'approve' ? 'Verified funds were added to the member’s product balance.' : 'No product funds were credited.',
+        });
+      },
+    });
+  };
   const saveProduct = (event: FormEvent) => { event.preventDefault(); createProduct.mutate({ data: { name: product.name, price: Number(product.price), daily: Number(product.daily), total: Number(product.total), days: Number(product.days) } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); setProduct({ name: '', price: '', daily: '', total: '', days: '' }); toast({ title: 'Product created' }); } }); };
   const saveSettings = (data: SettingsInput) => updateSettings.mutate({ data }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'Settings saved', description: 'Uganda rates, limits, and platform options are now active.' }); } });
   const saveAdmin = (event: FormEvent) => {
@@ -657,7 +673,7 @@ function AdminContent({ active, setActive }: { active: string; setActive: (value
   let view: ReactNode;
   if (active === 'analytics') view = <AdminListPage eyebrow="Platform analytics" title="Analytics." copy="A quick read on balances, deposits, withdrawals, and platform activity." loading={dashboard.isLoading} error={!!dashboard.error}><AdminAnalytics dashboard={dashboard.data} /></AdminListPage>;
   else if (active === 'users') view = <AdminListPage eyebrow="Member directory" title="Users." copy="Credit, debit, ban, or delete member accounts." loading={users.isLoading} error={!!users.error} empty={!users.data?.length}><AdminUsers users={users.data || []} onCredit={user => openUserWallet(user, 'credit')} onDebit={user => openUserWallet(user, 'debit')} onToggleBan={toggleBan} onDelete={removeUser} /></AdminListPage>;
-  else if (active === 'deposits') view = <AdminListPage eyebrow="Provider status" title="Payments." copy="PesaJet confirms payments automatically. Products are activated only after verified settlement." loading={payments.isLoading} error={!!payments.error} empty={!payments.data?.length}><AdminPayments payments={payments.data || []} /></AdminListPage>;
+  else if (active === 'deposits') view = <AdminListPage eyebrow="Manual payment review" title="Payments." copy="Confirm each transfer in the MTN or Airtel payment record before approving it. Approved deposits are credited to product funds only." loading={payments.isLoading} error={!!payments.error} empty={!payments.data?.length}><AdminPayments payments={payments.data || []} onReview={reviewDeposit} reviewing={reviewPayment.isPending} error={!!reviewPayment.error} /></AdminListPage>;
   else if (active === 'withdrawals') view = <AdminListPage eyebrow="Manual payout queue" title="Withdrawals." copy="Review member requests and confirm payments outside this system." loading={withdrawals.isLoading} error={!!withdrawals.error} empty={!withdrawals.data?.length}><AdminWithdrawals withdrawals={withdrawals.data || []} onReview={approveWithdrawal} /></AdminListPage>;
   else if (active === 'products') view = <AdminListPage eyebrow="Earning catalogue" title="Products." copy="Set the fixed earning plans available to members." action={<Button data-testid="button-new-product" onClick={() => setModal('product')}><Plus className="size-4" /> New product</Button>} loading={products.isLoading} error={!!products.error} empty={!products.data?.length}><AdminProducts products={products.data || []} onDelete={(id) => deleteProduct.mutate({ id }, { onSuccess: () => { queryClient.invalidateQueries(); toast({ title: 'Product removed' }); } })} /></AdminListPage>;
   else if (active === 'transactions') view = <AdminListPage eyebrow="Ledger" title="Transactions." copy="A complete record of wallet movement." loading={transactions.isLoading} error={!!transactions.error} empty={!transactions.data?.length}><AdminTransactions transactions={transactions.data || []} /></AdminListPage>;
@@ -704,7 +720,7 @@ function AdminSettingsEditor({ settings, onSave, pending, error }: { settings: S
     setOpeningAtText(toUgandaDateTimeInput(settings.openingAt));
   }, [settings]);
   const updateText = (key: 'brand' | 'currency' | 'supportHandle' | 'telegramUrl' | 'airtelNumber' | 'mtnNumber' | 'payeeName', value: string) => setValues(current => ({ ...current, [key]: value }));
-  const updateNumber = (key: 'minDeposit' | 'minWithdrawal' | 'withdrawalMultiple' | 'welcomeBonus' | 'checkinBonus' | 'withdrawalFeePercent' | 'l1CommissionPercent' | 'l2CommissionPercent' | 'l3CommissionPercent' | 'returnMultiple' | 'cycleDays' | 'maxWithdrawalsPerUserPerDay', value: string) => setValues(current => ({ ...current, [key]: value === '' ? 0 : Number(value) }));
+  const updateNumber = (key: 'minDeposit' | 'minWithdrawal' | 'withdrawalMultiple' | 'welcomeBonus' | 'checkinBonus' | 'withdrawalFeePercent' | 'l1CommissionPercent' | 'returnMultiple' | 'cycleDays' | 'maxWithdrawalsPerUserPerDay', value: string) => setValues(current => ({ ...current, [key]: value === '' ? 0 : Number(value) }));
   const updateToggle = (key: 'requirePlanBeforeWithdraw' | 'restrictWithdrawalsToHours' | 'requireReferralCode' | 'maintenanceMode' | 'openingCountdown' | 'announcementEnabled', checked: boolean) => setValues(current => ({ ...current, [key]: checked }));
   const save = (event: FormEvent) => {
     event.preventDefault();
@@ -717,7 +733,7 @@ function AdminSettingsEditor({ settings, onSave, pending, error }: { settings: S
   const numberField = (key: Parameters<typeof updateNumber>[0], label: string, min = 0, max?: number, step = 1, hint?: string) => <div className="space-y-1.5"><Field label={label} type="number" min={min} max={max} step={step} value={values[key]} onChange={event => updateNumber(key, event.target.value)} />{hint && <p className="text-xs text-slate-500">{hint}</p>}</div>;
   const toggle = (key: Parameters<typeof updateToggle>[0], title: string, description: string) => <AdminSettingsToggle title={title} description={description} checked={values[key]} onChange={checked => updateToggle(key, checked)} />;
   return <form onSubmit={save} className="space-y-5" data-testid="form-admin-settings">
-    <AdminSettingsSection title="Brand and support details" description="Member-facing identity and support details. Online deposits are processed through PesaJet.">
+    <AdminSettingsSection title="Brand and support details" description="Member-facing identity and the MTN/Airtel numbers used for manual deposits.">
       <Field label="Brand name" data-testid="input-settings-brand" maxLength={80} value={values.brand} onChange={event => updateText('brand', event.target.value)} required />
       <Field label="Currency code" data-testid="input-settings-currency" maxLength={8} value={values.currency} onChange={event => updateText('currency', event.target.value.toUpperCase())} required />
       <Field label="MTN Mobile Money number" data-testid="input-settings-mtn" value={values.mtnNumber} onChange={event => updateText('mtnNumber', event.target.value)} />
@@ -735,8 +751,6 @@ function AdminSettingsEditor({ settings, onSave, pending, error }: { settings: S
       {numberField('checkinBonus', 'Daily check-in bonus (UGX)', 0, 100_000_000)}
       {numberField('withdrawalFeePercent', 'Withdrawal fee (%)', 0, 100, 0.1)}
       {numberField('l1CommissionPercent', 'Referral commission · level 1 (%)', 0, 100, 0.1)}
-      {numberField('l2CommissionPercent', 'Referral commission · level 2 (%)', 0, 100, 0.1)}
-      {numberField('l3CommissionPercent', 'Referral commission · level 3 (%)', 0, 100, 0.1)}
       {numberField('returnMultiple', 'Maximum plan return multiple', 0, 100, 0.01)}
       {numberField('cycleDays', 'Earning cycle length (days)', 1, 365)}
       {numberField('maxWithdrawalsPerUserPerDay', 'Maximum withdrawals per member per day', 0, 1000, 1, '0 means there is no daily withdrawal cap.')}
@@ -783,7 +797,7 @@ function AdminOverview({ dashboard, loading, error, onReview }: { dashboard?: an
     <QueryState loading={loading} error={error}>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">{stats.map(([label, value, isMoney]) => <div key={String(label)} className="min-h-[94px] rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,.03)] sm:min-h-[108px] sm:p-5"><div className={`font-extrabold leading-tight tracking-tight text-slate-900 ${isMoney ? 'text-[18px] sm:text-[21px]' : 'text-[25px] sm:text-[30px]'}`}>{value}</div><div className="mt-2 text-[12px] font-medium text-slate-500 sm:text-[13px]">{label}</div></div>)}</div>
       <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.03)] sm:p-6"><div className="flex items-center justify-between gap-4"><div><h2 className="text-lg font-extrabold tracking-tight text-slate-900">Member balances</h2><p className="mt-1 text-sm text-slate-500">Product funds are tracked separately and cannot be withdrawn.</p></div><div className="rounded-xl bg-[#fff1e7] p-3 text-[#ef7815]"><Wallet className="size-5" /></div></div><div className="mt-5 grid gap-4 sm:grid-cols-2"><div><div className="text-xs text-slate-500">Withdrawable wallet total</div><div className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">{money(dashboard?.walletBalances)}</div></div><div><div className="text-xs text-slate-500">Product funds total</div><div className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">{money(dashboard?.productFundBalances)}</div></div></div></div>
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.03)] sm:p-6"><div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-extrabold tracking-tight text-slate-900">Platform pulse</h2><p className="mt-1 text-sm text-slate-500">The numbers behind the circle.</p></div><BarChart3 className="size-5 text-slate-400" /></div><div className="grid gap-3 sm:grid-cols-2">{[['Purchases', dashboard?.purchases], ['Pending deposits', dashboard?.payments], ['Withdrawals', dashboard?.withdrawals], ['Ledger entries', dashboard?.transactions], ['Active products', dashboard?.products], ['Total invested', money(dashboard?.totalInvested)]].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-[#f4f7fb] p-4"><div className="text-xs font-medium text-slate-500">{label}</div><div className="mt-2 font-mono text-xl font-semibold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value || '0'}</div></div>)}</div></div><div className="rounded-2xl bg-slate-900 p-6 text-white"><div className="flex items-center gap-2 text-[#f4a261]"><ShieldCheck className="size-4" /><span className="text-[10px] font-bold uppercase tracking-[.16em]">Automated settlement</span></div><h2 className="mt-6 text-3xl font-extrabold leading-tight">Provider confirmation protects deposits.</h2><p className="mt-4 text-sm leading-6 text-white/60">PesaJet confirms mobile-money deposits. Only withdrawal requests require administrator review.</p><div className="my-6 h-px bg-white/15" /><div className="flex items-center gap-3 text-sm text-white/70"><Clock3 className="size-4 text-[#f4a261]" /> {dashboard?.payments || 0} deposits awaiting provider confirmation</div></div></div>
+      <div className="mt-5 grid gap-5 xl:grid-cols-[1.15fr_.85fr]"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.03)] sm:p-6"><div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-extrabold tracking-tight text-slate-900">Platform pulse</h2><p className="mt-1 text-sm text-slate-500">The numbers behind the circle.</p></div><BarChart3 className="size-5 text-slate-400" /></div><div className="grid gap-3 sm:grid-cols-2">{[['Purchases', dashboard?.purchases], ['Pending deposits', dashboard?.payments], ['Withdrawals', dashboard?.withdrawals], ['Ledger entries', dashboard?.transactions], ['Active products', dashboard?.products], ['Total invested', money(dashboard?.totalInvested)]].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-[#f4f7fb] p-4"><div className="text-xs font-medium text-slate-500">{label}</div><div className="mt-2 font-mono text-xl font-semibold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value || '0'}</div></div>)}</div></div><div className="rounded-2xl bg-slate-900 p-6 text-white"><div className="flex items-center gap-2 text-[#f4a261]"><ShieldCheck className="size-4" /><span className="text-[10px] font-bold uppercase tracking-[.16em]">Manual verification</span></div><h2 className="mt-6 text-3xl font-extrabold leading-tight">Every deposit is checked before credit.</h2><p className="mt-4 text-sm leading-6 text-white/60">Members send MTN or Airtel transfers directly. An administrator verifies the receipt in the payment record before adding purchase-only product funds.</p><div className="my-6 h-px bg-white/15" /><div className="flex items-center gap-3 text-sm text-white/70"><Clock3 className="size-4 text-[#f4a261]" /> {dashboard?.payments || 0} deposits awaiting administrator review</div></div></div>
     </QueryState>
   </div>;
 }
@@ -826,11 +840,40 @@ function AdminSupportPage({ settings }: { settings?: Settings }) {
 function AdminUserWalletModal({ action, user, amount, note, setAmount, setNote, onClose, onSubmit, pending, error }: { action: 'credit' | 'debit'; user: any; amount: string; note: string; setAmount: (value: string) => void; setNote: (value: string) => void; onClose: () => void; onSubmit: (event: FormEvent) => void; pending: boolean; error: boolean }) {
   return <Modal title={`${action === 'credit' ? 'Credit' : 'Debit'} ${user.phone}`} onClose={onClose}><div className="rounded-2xl bg-secondary p-4 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Current balance</span><span className="font-mono font-semibold">{money(user.wallet)}</span></div><p className="mt-2 text-xs leading-5 text-muted-foreground">{action === 'credit' ? 'The amount will be added to the member wallet and lifetime earned total.' : 'The amount will be removed from the member wallet. Debit cannot exceed the current balance.'}</p></div><form onSubmit={onSubmit} className="mt-6 space-y-4"><Field label="Amount (UGX)" data-testid={`input-${action}-user-amount`} type="number" min="1" max={action === 'debit' ? user.wallet : undefined} value={amount} onChange={e => setAmount(e.target.value)} required /><Field label="Note (optional)" data-testid={`input-${action}-user-note`} placeholder="Reason for this adjustment" value={note} onChange={e => setNote(e.target.value)} />{error && <p className="text-sm text-destructive">The balance adjustment could not be completed. Check the amount and try again.</p>}<Button data-testid={`button-submit-${action}-user`} type="submit" className="w-full" disabled={pending}>{pending ? 'Saving…' : `${action === 'credit' ? 'Credit' : 'Debit'} user`}<Check className="size-4" /></Button></form></Modal>;
 }
-function AdminPayments({ payments }: { payments: Payment[] }) {
-  return <div className="space-y-3">{payments.map(payment => <div key={payment.id} data-testid={`row-admin-payment-${payment.id}`} className="rounded-2xl border border-border bg-card p-5 sm:flex sm:items-center sm:justify-between">
-    <div><div className="font-semibold">Product funds deposit <StatusPill status={payment.status} /></div><div className="mt-2 text-xs text-muted-foreground">{payment.payerPhone} · {payment.method} · {money(payment.amount, 'UGX')} · Ref <span className="font-mono text-foreground">{payment.transactionId}</span></div><div className="mt-1 text-xs text-muted-foreground">{payment.status === 'completed' || payment.status === 'approved' ? `Confirmed ${shortDate(payment.settledAt || payment.reviewedAt)}` : `Started ${shortDate(payment.createdAt)}`}</div></div>
-    <div className="mt-3 text-xs font-medium text-muted-foreground sm:mt-0">{payment.status === 'pending' ? 'Awaiting PesaJet confirmation' : payment.status === 'completed' || payment.status === 'approved' ? 'Provider confirmed' : 'Not completed'}</div>
-  </div>)}</div>;
+function AdminPayments({ payments, onReview, reviewing, error }: { payments: Payment[]; onReview: (id: string, action: 'approve' | 'reject') => void; reviewing: boolean; error: boolean }) {
+  return <div className="space-y-3">
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+      Verify each transaction in the matching MTN or Airtel payment record before approving. A member-submitted reference alone is not proof of payment.
+    </div>
+    {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">The deposit review could not be saved. Refresh the list and try again.</p>}
+    {payments.map(payment => <div key={payment.id} data-testid={`row-admin-payment-${payment.id}`} className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="font-semibold">Product-fund deposit <StatusPill status={payment.status} /></div>
+          <div className="mt-2 text-sm">{money(payment.amount, 'UGX')} · {payment.method}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Sent from {payment.payerPhone} · Submitted {shortDate(payment.createdAt)}</div>
+          <div className="mt-2 text-xs text-muted-foreground">Transfer reference: {payment.payerReference
+            ? <span className="font-mono font-semibold text-foreground">{payment.payerReference}</span>
+            : <span className="font-semibold text-destructive">Not provided — do not approve this legacy request.</span>}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">Platform deposit ID: <span className="font-mono">{payment.transactionId}</span></div>
+        </div>
+        {payment.status === 'pending'
+          ? <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <div className="text-xs font-medium text-amber-700">Awaiting administrator verification</div>
+            <div className="flex gap-2">
+              <Button data-testid={`button-approve-payment-${payment.id}`} disabled={reviewing || !payment.payerReference} onClick={() => onReview(payment.id, 'approve')} className="bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-700"><Check className="size-3.5" /> Approve &amp; credit</Button>
+              <Button data-testid={`button-reject-payment-${payment.id}`} disabled={reviewing} onClick={() => onReview(payment.id, 'reject')} variant="outline" className="px-3 text-xs"><X className="size-3.5" /> Reject</Button>
+            </div>
+          </div>
+          : <div className="text-xs font-medium text-muted-foreground">{payment.status === 'approved' || payment.status === 'completed'
+            ? `Credited to product funds ${shortDate(payment.settledAt || payment.reviewedAt)}`
+            : payment.status === 'rejected'
+              ? `Rejected · no funds credited ${shortDate(payment.reviewedAt)}`
+              : 'Not completed'}</div>}
+      </div>
+    </div>)}
+  </div>;
 }
 function AdminWithdrawals({ withdrawals, onReview }: { withdrawals: any[]; onReview: (id: string, action: 'approve' | 'reject') => void }) { return <div className="space-y-3">{withdrawals.map(item => <div key={item.id} data-testid={`row-admin-withdrawal-${item.id}`} className="rounded-2xl border border-border bg-card p-5 sm:flex sm:items-center sm:justify-between"><div><div className="font-mono text-lg font-semibold">{money(item.amount)}</div><div className="mt-1 text-xs text-muted-foreground">{item.phone} · {item.method} · Net {money(item.netAmount)}</div><div className="mt-1 text-xs text-muted-foreground">Requested {shortDate(item.createdAt)}</div></div><div className="mt-4 flex items-center gap-2 sm:mt-0">{item.status === 'pending' ? <><Button data-testid={`button-approve-withdrawal-${item.id}`} onClick={() => onReview(item.id, 'approve')} className="bg-accent text-primary hover:bg-accent/90"><Check className="size-4" /> Mark paid</Button><Button data-testid={`button-reject-withdrawal-${item.id}`} onClick={() => onReview(item.id, 'reject')} variant="outline"><X className="size-4" /> Reject</Button></> : <StatusPill status={item.status} />}</div></div>)}</div>; }
 function AdminProducts({ products, onDelete }: { products: Product[]; onDelete: (id: string) => void }) { return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{products.map(product => <div key={product.id} data-testid={`card-admin-product-${product.id}`} className="overflow-hidden rounded-3xl border border-border bg-card"><img src={planImage(product.name)} alt={`Illustrative ${product.name}`} loading="lazy" className="aspect-[16/9] w-full object-cover" /><div className="p-6"><div className="flex items-start justify-between"><div className="grid size-10 place-items-center rounded-xl bg-primary text-accent"><Crown className="size-4" /></div><button data-testid={`button-delete-product-${product.id}`} onClick={() => { if (window.confirm(`Remove ${product.name}?`)) onDelete(product.id); }} className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-4" /></button></div><h2 className="mt-6 font-display text-2xl font-semibold">{product.name}</h2><div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><span className="text-xs text-muted-foreground">Price</span><div className="font-mono">{money(product.price)}</div></div><div><span className="text-xs text-muted-foreground">Daily</span><div className="font-mono text-accent-foreground">{money(product.daily)}</div></div><div><span className="text-xs text-muted-foreground">Total</span><div className="font-mono">{money(product.total)}</div></div><div><span className="text-xs text-muted-foreground">Term</span><div className="font-mono">{product.days} days</div></div></div></div></div>)}</div>; }
