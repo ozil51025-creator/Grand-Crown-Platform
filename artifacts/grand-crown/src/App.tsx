@@ -64,6 +64,35 @@ const money = (value = 0, currency = 'UGX') =>
   `${currency} ${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 const shortDate = (value?: string | null) =>
   value ? new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+const ugandaDateKey = (value = new Date()) => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Africa/Kampala',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(value);
+
+function toUgandaDateTimeInput(value: string | null) {
+  if (!value) return '';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Kampala',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(value));
+  const part = (name: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === name)?.value || '';
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+}
+
+function fromUgandaDateTimeInput(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) - 3, Number(minute))).toISOString();
+}
+
 const tone = (status = '') => {
   const value = status.toLowerCase();
   if (value.includes('approve') || value === 'completed' || value === 'paid') return 'success';
@@ -188,8 +217,38 @@ function MemberDashboard() {
     onError: () => toast({ title: 'Could not sign out', description: 'Check your connection and try again.', variant: 'destructive' }),
   });
   if (session.isLoading) return <div className="grid min-h-[100dvh] place-items-center bg-background"><div className="w-64"><Loading rows={4} /></div></div>;
+  if (session.data && session.data.accessMode !== 'available') {
+    return <AccessPage mode={session.data.accessMode} message={session.data.accessMessage} openingAt={session.data.openingAt} />;
+  }
   if (!session.data?.loggedIn || !session.data.user) return <AuthPage />;
   return <MemberShell active={active} setActive={setActive} user={session.data.user} onLogout={doLogout}><MemberContent active={active} user={session.data.user} setActive={setActive} onLogout={doLogout} loggingOut={logout.isPending} /></MemberShell>;
+}
+
+function AccessPage({ mode, message, openingAt }: { mode: 'maintenance' | 'opening'; message: string; openingAt: string | null }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (mode !== 'opening') return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [mode]);
+  const remaining = openingAt ? Math.max(0, Date.parse(openingAt) - now) : 0;
+  const days = Math.floor(remaining / 86_400_000);
+  const hours = Math.floor((remaining % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((remaining % 3_600_000) / 60_000);
+  const seconds = Math.floor((remaining % 60_000) / 1000);
+  return <main className="grain grid min-h-[100dvh] place-items-center bg-primary p-5 text-primary-foreground">
+    <section className="w-full max-w-lg rounded-3xl border border-sidebar-border bg-card p-8 text-card-foreground shadow-2xl sm:p-10">
+      <Logo />
+      <div className="mt-10 font-mono text-[10px] uppercase tracking-[.2em] text-accent-foreground">{mode === 'maintenance' ? 'Temporarily unavailable' : 'Opening soon'}</div>
+      <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight">{mode === 'maintenance' ? 'We’ll be back shortly.' : 'Grand Crown is preparing to open.'}</h1>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{message}</p>
+      {mode === 'opening' && openingAt && <div className="mt-7 rounded-2xl bg-secondary p-5">
+        {remaining > 0 ? <div className="grid grid-cols-4 gap-2 text-center" aria-live="polite">{[['Days', days], ['Hours', hours], ['Minutes', minutes], ['Seconds', seconds]].map(([label, value]) => <div key={String(label)} className="rounded-xl bg-card px-2 py-3"><div className="font-mono text-2xl font-semibold">{String(value).padStart(2, '0')}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div></div>)}</div> : <div className="text-sm font-semibold">The opening time has arrived. Refresh this page to continue.</div>}
+        <p className="mt-4 text-center text-xs text-muted-foreground">Opening {new Date(openingAt).toLocaleString('en-UG', { timeZone: 'Africa/Kampala', dateStyle: 'long', timeStyle: 'short' })} · Uganda time</p>
+      </div>}
+      {remaining === 0 && mode === 'opening' && <Button className="mt-6 w-full" onClick={() => window.location.reload()}>Refresh page</Button>}
+    </section>
+  </main>;
 }
 
 function MemberContent({ active, user, setActive, onLogout, loggingOut }: { active: string; user: User; setActive: (value: string) => void; onLogout: () => void; loggingOut: boolean }) {
@@ -205,6 +264,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const { toast } = useToast();
   const [modal, setModal] = useState<'payment' | 'withdrawal' | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
   const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone, transactionId: '' });
   const [withdrawal, setWithdrawal] = useState({ amount: '', method: 'MTN Mobile Money', phone: user.phone });
   const currency = settings.data?.currency || 'UGX';
@@ -219,13 +279,26 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const submitPaymentForm = (event: FormEvent) => { event.preventDefault(); if (!selectedProduct) return; submitPayment.mutate({ data: { productId: selectedProduct.id, amount: selectedProduct.price, ...payment } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Payment submitted', description: 'We will verify your mobile-money payment manually.' }); } }); };
   const submitWithdrawalForm = (event: FormEvent) => { event.preventDefault(); requestWithdrawal.mutate({ data: { amount: Number(withdrawal.amount), method: withdrawal.method, phone: withdrawal.phone } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Withdrawal requested', description: 'Your request is now waiting for administrator review.' }); } }); };
   const claim = () => checkin.mutate(undefined, { onSuccess: result => { queryClient.invalidateQueries(); toast({ title: `Check-in credited ${money(result.reward, currency)}`, description: 'Your daily rhythm is intact.' }); } });
+  const announcementKey = `${settings.data?.announcementTitle || ''}:${settings.data?.announcementMessage || ''}`;
+  useEffect(() => {
+    if (!settings.data?.announcementEnabled || !announcementKey) return;
+    if (sessionStorage.getItem(`gc-announcement:${announcementKey}`) === 'dismissed') {
+      setDismissedAnnouncement(announcementKey);
+    } else {
+      setDismissedAnnouncement(null);
+    }
+  }, [announcementKey, settings.data?.announcementEnabled]);
+  const dismissAnnouncement = () => {
+    sessionStorage.setItem(`gc-announcement:${announcementKey}`, 'dismissed');
+    setDismissedAnnouncement(announcementKey);
+  };
   let view: ReactNode;
   if (active === 'products') view = <ProductsView products={products.data} loading={products.isLoading} error={!!products.error} onBuy={openPayment} currency={currency} />;
   else if (active === 'purchases') view = <PurchasesView purchases={purchases.data} loading={purchases.isLoading} error={!!purchases.error} currency={currency} onBrowse={() => setActive('products')} />;
   else if (active === 'referrals') view = <ReferralView referrals={referrals.data} loading={referrals.isLoading} error={!!referrals.error} currency={currency} />;
   else if (active === 'account') view = <AccountPage user={userData} settings={settings.data} withdrawals={withdrawals.data} withdrawalsLoading={withdrawals.isLoading} withdrawalsError={!!withdrawals.error} currency={currency} canWithdraw={dashboard.data?.canWithdraw} onDeposit={() => setActive('products')} onWithdraw={() => setModal('withdrawal')} onLogout={onLogout} loggingOut={loggingOut} />;
-  else view = <OverviewView dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} currency={currency} onCheckin={claim} checkingIn={checkin.isPending} onWithdraw={() => setModal('withdrawal')} onBuy={() => setActive('products')} />;
-  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'payment' && selectedProduct && <PaymentModal product={selectedProduct} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitPaymentForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}</>;
+  else view = <OverviewView dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} currency={currency} settings={settings.data} onCheckin={claim} checkingIn={checkin.isPending} onWithdraw={() => setModal('withdrawal')} onBuy={() => setActive('products')} />;
+  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'payment' && selectedProduct && <PaymentModal product={selectedProduct} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitPaymentForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} settings={settings.data} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}{settings.data?.announcementEnabled && dismissedAnnouncement !== announcementKey && <Modal title={settings.data.announcementTitle || 'Grand Crown update'} onClose={dismissAnnouncement}><div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{settings.data.announcementMessage || 'There are no additional details yet.'}</div><Button className="mt-6 w-full" onClick={dismissAnnouncement}>Continue</Button></Modal>}</>;
 }
 
 function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {
