@@ -940,34 +940,148 @@ router.get("/referral", (req, res) => {
   });
 });
 
-router.post("/payments", (req, res) => {
+router.get("/payments", (req, res) => {
+  const data = readData();
+  const user = requireUser(req, res, data);
+  if (!user) return;
+  return res.json(data.payments.filter((payment) => payment.userId === user.id).slice().reverse());
+});
+
+router.get("/payments/:id", async (req, res): Promise<void> => {
+  const data = readData();
+  const user = requireUser(req, res, data);
+  if (!user) return;
+  const payment = data.payments.find((item) => item.id === req.params.id && item.userId === user.id);
+  if (!payment) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
+  }
+
+  if (payment.status === "pending") {
+    const provider = paymentProvider(payment.method);
+    if (!provider) {
+      res.status(409).json({ error: "Payment uses an unsupported provider" });
+      return;
+    }
+    try {
+      const transaction = payment.providerTransactionId
+        ? await pesajetRequest<PesaJetTransaction>(`/payments/${encodeURIComponent(payment.providerTransactionId)}`)
+        : await createPesaJetCollection(payment, provider);
+      const latestData = readData();
+      const latestPayment = latestData.payments.find((item) => item.id === payment.id);
+      if (!latestPayment || latestPayment.userId !== user.id) {
+        res.status(404).json({ error: "Payment not found" });
+        return;
+      }
+      applyVerifiedProviderTransaction(latestData, latestPayment, transaction, provider);
+      writeData(latestData);
+      res.json(latestPayment);
+      return;
+    } catch (error) {
+      req.log.warn(
+        { paymentId: payment.id, statusCode: error instanceof PesaJetRequestError ? error.statusCode : undefined },
+        "Could not refresh PesaJet payment status",
+      );
+      const latestPayment = readData().payments.find((item) => item.id === payment.id);
+      res.json(latestPayment ?? payment);
+      return;
+    }
+  }
+  res.json(payment);
+});
+
+router.post("/webhooks/pesajet", (req, res) => {
+  const payload = req.body && typeof req.body === "object" && !Array.isArray(req.body)
+    ? req.body as Record<string, unknown>
+    : undefined;
+  if (!payload || !verifyPesaJetWebhook(payload, req.get("x-webhook-signature") ?? "")) {
+    req.log.warn("Rejected PesaJet webhook with invalid signature");
+    return res.status(401).json({ error: "Invalid webhook signature" });
+  }
+
+  const eventName = payload.event;
+  if (eventName === "ping") return res.json({ received: true });
+  if (!["payment.completed", "payment.failed", "payment.expired"].includes(String(eventName))) {
+    return res.status(400).json({ error: "Unsupported webhook event" });
+  }
+  const reference = typeof payload.reference === "string" ? payload.reference : "";
+  const transactionId = typeof payload.transactionId === "string" ? payload.transactionId : "";
+  const status = typeof payload.status === "string" ? payload.status.toUpperCase() : "";
+  const expectedStatus = eventName === "payment.completed"
+    ? "COMPLETED"
+    : eventName === "payment.failed"
+      ? "FAILED"
+      : "EXPIRED";
+  if (!reference || !transactionId || status !== expectedStatus) {
+    return res.status(400).json({ error: "Incomplete or inconsistent payment event" });
+  }
+
+  const data = readData();
+  const payment = data.payments.find((item) => item.transactionId === reference);
+  if (!payment) {
+    req.log.warn({ reference }, "Ignored PesaJet webhook for an unknown payment");
+    return res.json({ received: true });
+  }
+  const provider = paymentProvider(payment.method);
+  if (
+    !provider ||
+    payload.provider !== provider ||
+    Number(payload.amount) !== payment.amount ||
+    payload.currency !== "UGX" ||
+    (payment.providerTransactionId && payment.providerTransactionId !== transactionId)
+  ) {
+    req.log.warn({ paymentId: payment.id }, "Ignored PesaJet webhook with mismatched payment details");
+    return res.status(400).json({ error: "Payment details did not match" });
+  }
+
+  try {
+    applyVerifiedProviderTransaction(data, payment, {
+      transactionId,
+      reference,
+      amount: Number(payload.amount),
+      currency: String(payload.currency),
+      status,
+      provider,
+      type: "COLLECTION",
+    }, provider);
+  } catch {
+    req.log.warn({ paymentId: payment.id }, "Ignored PesaJet webhook with an invalid transaction");
+    return res.status(400).json({ error: "Payment details did not match" });
+  }
+  writeData(data);
+  return res.json({ received: true });
+});
+
+router.post("/payments", async (req, res): Promise<void> => {
   const data = readData();
   const user = requireUser(req, res, data);
   if (!user) return;
   const productId = bodyString(req, "productId");
   const method = bodyString(req, "method");
-  const amount = bodyNumber(req, "amount");
   const payerPhone = bodyString(req, "payerPhone");
-  const transactionId = bodyString(req, "transactionId");
   const product = data.products.find((item) => item.id === productId);
   if (!product) return res.status(404).json({ error: "Product not found" });
-  if (!["Airtel Money", "MTN Mobile Money"].includes(method)) return res.status(400).json({ error: "Choose a valid payment method" });
-  if (!/^\+?[0-9]{7,15}$/.test(payerPhone) || !/^[A-Za-z0-9._-]{4,80}$/.test(transactionId)) {
-    return res.status(400).json({ error: "Enter a valid payer phone and transaction reference" });
+  const provider = paymentProvider(method);
+  if (!provider) return void res.status(400).json({ error: "Choose a valid payment method" });
+  if (!normalizeUgandaPhone(payerPhone)) {
+    return void res.status(400).json({ error: "Enter a valid Ugandan mobile number" });
   }
-  if (amount !== product.price) return res.status(400).json({ error: "Amount must match the selected product price" });
-  if (amount < data.settings.minDeposit) {
+  if (data.settings.currency !== "UGX") {
+    return void res.status(503).json({ error: "PesaJet payments require the platform currency to be UGX" });
+  }
+  if (!process.env["PESAJET_API_KEY"]) {
+    return void res.status(503).json({ error: "Mobile-money payments are not configured yet" });
+  }
+  if (product.price < data.settings.minDeposit) {
     return res.status(400).json({ error: `Minimum deposit is ${money(data.settings.minDeposit, data.settings.currency)}` });
   }
-  if (data.payments.some((payment) => payment.transactionId.toLowerCase() === transactionId.toLowerCase())) {
-    return res.status(409).json({ error: "That transaction reference has already been submitted" });
-  }
+  const transactionId = `GC-${crypto.randomBytes(12).toString("hex").toUpperCase()}`;
   const payment: Payment = {
     id: id("PAY"),
     userId: user.id,
     productId,
     productName: product.name,
-    amount,
+    amount: product.price,
     method,
     payerPhone,
     transactionId,
@@ -975,9 +1089,35 @@ router.post("/payments", (req, res) => {
     createdAt: now(),
   };
   data.payments.push(payment);
-  data.activity.push({ id: id("ACT"), userId: user.id, type: "payment_submitted", createdAt: now() });
+  data.activity.push({ id: id("ACT"), userId: user.id, type: "payment_initiated", createdAt: now() });
   writeData(data);
-  return res.status(201).json({ ok: true, paymentId: payment.id, status: payment.status, payment });
+
+  try {
+    const transaction = await createPesaJetCollection(payment, provider);
+    const latestData = readData();
+    const latestPayment = latestData.payments.find((item) => item.id === payment.id);
+    if (!latestPayment) {
+      res.status(500).json({ error: "Payment record could not be found" });
+      return;
+    }
+    applyVerifiedProviderTransaction(latestData, latestPayment, transaction, provider);
+    writeData(latestData);
+    res.status(201).json({ ok: true, paymentId: payment.id, status: latestPayment.status, payment: latestPayment });
+  } catch (error) {
+    const latestData = readData();
+    const latestPayment = latestData.payments.find((item) => item.id === payment.id);
+    if (error instanceof PesaJetRequestError && error.statusCode && error.statusCode >= 400 && error.statusCode < 500 && latestPayment?.status === "pending") {
+      latestPayment.status = "failed";
+      latestData.activity.push({ id: id("ACT"), userId: user.id, type: "payment_failed", createdAt: now() });
+      writeData(latestData);
+    }
+    req.log.warn(
+      { paymentId: payment.id, statusCode: error instanceof PesaJetRequestError ? error.statusCode : undefined },
+      "PesaJet collection request did not return a verified transaction",
+    );
+    const current = latestData.payments.find((item) => item.id === payment.id) ?? payment;
+    res.status(201).json({ ok: true, paymentId: payment.id, status: current.status, payment: current });
+  }
 });
 
 router.get("/purchases", (req, res) => {
