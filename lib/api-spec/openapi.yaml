@@ -38,7 +38,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Settings"
+                $ref: "#/components/schemas/PublicSettings"
   /products:
     get:
       operationId: getProducts
@@ -687,7 +687,70 @@ components:
         mtnNumber: { type: string }
         payeeName: { type: string }
         termsText: { type: string }
-      required: [brand, currency]
+        minDeposit: { type: number }
+        minWithdrawal: { type: number }
+        withdrawalMultiple: { type: number }
+        welcomeBonus: { type: number }
+        checkinBonus: { type: number }
+        withdrawalFeePercent: { type: number }
+        l1CommissionPercent: { type: number }
+        l2CommissionPercent: { type: number }
+        l3CommissionPercent: { type: number }
+        returnMultiple: { type: number }
+        cycleDays: { type: integer }
+        maxWithdrawalsPerUserPerDay: { type: integer }
+        requirePlanBeforeWithdraw: { type: boolean }
+        restrictWithdrawalsToHours: { type: boolean }
+        withdrawalStartTime: { type: string }
+        withdrawalEndTime: { type: string }
+        requireReferralCode: { type: boolean }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string }
+        openingCountdown: { type: boolean }
+        openingAt: { type: ["string", "null"], format: date-time }
+        allowedDomains:
+          type: array
+          items: { type: string }
+        announcementEnabled: { type: boolean }
+        announcementTitle: { type: string }
+        announcementMessage: { type: string }
+      required: [brand, currency, supportHandle, telegramUrl, airtelNumber, mtnNumber, payeeName, termsText, minDeposit, minWithdrawal, withdrawalMultiple, welcomeBonus, checkinBonus, withdrawalFeePercent, l1CommissionPercent, l2CommissionPercent, l3CommissionPercent, returnMultiple, cycleDays, maxWithdrawalsPerUserPerDay, requirePlanBeforeWithdraw, restrictWithdrawalsToHours, withdrawalStartTime, withdrawalEndTime, requireReferralCode, maintenanceMode, maintenanceMessage, openingCountdown, openingAt, allowedDomains, announcementEnabled, announcementTitle, announcementMessage]
+    PublicSettings:
+      type: object
+      properties:
+        brand: { type: string }
+        currency: { type: string }
+        supportHandle: { type: string }
+        telegramUrl: { type: string }
+        airtelNumber: { type: string }
+        mtnNumber: { type: string }
+        payeeName: { type: string }
+        termsText: { type: string }
+        minDeposit: { type: number }
+        minWithdrawal: { type: number }
+        withdrawalMultiple: { type: number }
+        welcomeBonus: { type: number }
+        checkinBonus: { type: number }
+        withdrawalFeePercent: { type: number }
+        l1CommissionPercent: { type: number }
+        l2CommissionPercent: { type: number }
+        l3CommissionPercent: { type: number }
+        returnMultiple: { type: number }
+        cycleDays: { type: integer }
+        maxWithdrawalsPerUserPerDay: { type: integer }
+        requirePlanBeforeWithdraw: { type: boolean }
+        restrictWithdrawalsToHours: { type: boolean }
+        withdrawalStartTime: { type: string }
+        withdrawalEndTime: { type: string }
+        requireReferralCode: { type: boolean }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string }
+        openingCountdown: { type: boolean }
+        openingAt: { type: ["string", "null"], format: date-time }
+        announcementEnabled: { type: boolean }
+        announcementTitle: { type: string }
+        announcementMessage: { type: string }
+      required: [brand, currency, supportHandle, telegramUrl, airtelNumber, mtnNumber, payeeName, termsText, minDeposit, minWithdrawal, withdrawalMultiple, welcomeBonus, checkinBonus, withdrawalFeePercent, l1CommissionPercent, l2CommissionPercent, l3CommissionPercent, returnMultiple, cycleDays, maxWithdrawalsPerUserPerDay, requirePlanBeforeWithdraw, restrictWithdrawalsToHours, withdrawalStartTime, withdrawalEndTime, requireReferralCode, maintenanceMode, maintenanceMessage, openingCountdown, openingAt, announcementEnabled, announcementTitle, announcementMessage]
     SettingsInput:
       type: object
       properties:
@@ -699,6 +762,35 @@ components:
         mtnNumber: { type: string }
         payeeName: { type: string }
         termsText: { type: string, maxLength: 20000 }
+        minDeposit: { type: number, minimum: 0, maximum: 100000000 }
+        minWithdrawal: { type: number, minimum: 0, maximum: 100000000 }
+        withdrawalMultiple: { type: number, minimum: 0, maximum: 100000000 }
+        welcomeBonus: { type: number, minimum: 0, maximum: 100000000 }
+        checkinBonus: { type: number, minimum: 0, maximum: 100000000 }
+        withdrawalFeePercent: { type: number, minimum: 0, maximum: 100 }
+        l1CommissionPercent: { type: number, minimum: 0, maximum: 100 }
+        l2CommissionPercent: { type: number, minimum: 0, maximum: 100 }
+        l3CommissionPercent: { type: number, minimum: 0, maximum: 100 }
+        returnMultiple: { type: number, minimum: 0, maximum: 100 }
+        cycleDays: { type: integer, minimum: 1, maximum: 365 }
+        maxWithdrawalsPerUserPerDay: { type: integer, minimum: 0, maximum: 1000 }
+        requirePlanBeforeWithdraw: { type: boolean }
+        restrictWithdrawalsToHours: { type: boolean }
+        withdrawalStartTime: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        withdrawalEndTime: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        requireReferralCode: { type: boolean }
+        maintenanceMode: { type: boolean }
+        maintenanceMessage: { type: string, maxLength: 500 }
+        openingCountdown: { type: boolean }
+        openingAt: { type: ["string", "null"], format: date-time }
+        allowedDomains:
+          type: array
+          maxItems: 50
+          items: { type: string, minLength: 1, maxLength: 253 }
+        announcementEnabled: { type: boolean }
+        announcementTitle: { type: string, maxLength: 120 }
+        announcementMessage: { type: string, maxLength: 2000 }
+      required: [brand, currency, supportHandle, telegramUrl, airtelNumber, mtnNumber, payeeName, termsText, minDeposit, minWithdrawal, withdrawalMultiple, welcomeBonus, checkinBonus, withdrawalFeePercent, l1CommissionPercent, l2CommissionPercent, l3CommissionPercent, returnMultiple, cycleDays, maxWithdrawalsPerUserPerDay, requirePlanBeforeWithdraw, restrictWithdrawalsToHours, withdrawalStartTime, withdrawalEndTime, requireReferralCode, maintenanceMode, maintenanceMessage, openingCountdown, openingAt, allowedDomains, announcementEnabled, announcementTitle, announcementMessage]
     Product:
       type: object
       properties:
@@ -784,7 +876,10 @@ components:
       properties:
         loggedIn: { type: boolean }
         user: { anyOf: [{ $ref: "#/components/schemas/User" }, { type: "null" }] }
-      required: [loggedIn]
+        accessMode: { type: string, enum: [available, maintenance, opening] }
+        accessMessage: { type: string }
+        openingAt: { type: ["string", "null"], format: date-time }
+      required: [loggedIn, accessMode, accessMessage, openingAt]
     OkResponse:
       type: object
       properties:
