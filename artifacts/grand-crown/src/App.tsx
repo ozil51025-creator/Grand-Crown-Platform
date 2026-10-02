@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   useClaimCheckin,
   useBanUser,
+  useBuyProduct,
   useCreateAdminAccount,
   useCreditUser,
   useCreateProduct,
@@ -264,12 +265,14 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const checkin = useClaimCheckin();
   const requestWithdrawal = useRequestWithdrawal();
   const submitPayment = useSubmitPayment();
+  const buyProduct = useBuyProduct();
   const { toast } = useToast();
-  const [modal, setModal] = useState<'payment' | 'payment-status' | 'withdrawal' | null>(null);
+  const [modal, setModal] = useState<'deposit' | 'payment-status' | 'purchase' | 'withdrawal' | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
   const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone });
+  const [depositAmount, setDepositAmount] = useState('500');
   const [withdrawal, setWithdrawal] = useState({ amount: '', method: 'MTN Mobile Money', phone: user.phone });
   const currency = settings.data?.currency || 'UGX';
   const userData = dashboard.data?.user || user;
@@ -279,21 +282,37 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const experiencePhoto = active === 'overview' || active === 'purchases'
     ? planImage(primaryPlan?.productName || 'Presidential Suite')
     : undefined;
-  const openPayment = (product: Product) => { setSelectedProduct(product); setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone }); setModal('payment'); };
+  const openPurchase = (product: Product) => { setSelectedProduct(product); setModal('purchase'); };
+  const openDeposit = (amount?: number) => {
+    const minimum = settings.data?.minDeposit ?? 500;
+    setDepositAmount(String(Math.max(minimum, amount ?? minimum)));
+    setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone });
+    setModal('deposit');
+  };
   const openPaymentStatus = (paymentId: string) => { setSelectedPaymentId(paymentId); setModal('payment-status'); };
-  const submitPaymentForm = (event: FormEvent) => {
+  const submitDepositForm = (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedProduct) return;
-    submitPayment.mutate({ data: { productId: selectedProduct.id, ...payment } }, {
+    submitPayment.mutate({ data: { amount: Number(depositAmount), ...payment } }, {
       onSuccess: result => {
         queryClient.invalidateQueries();
         if (result.paymentId) {
           setSelectedPaymentId(result.paymentId);
           setModal('payment-status');
-          toast({ title: 'Payment request created', description: 'Check your phone for the mobile-money prompt. The product activates only after PesaJet confirms payment.' });
+          toast({ title: 'Deposit request created', description: 'Check your phone for the mobile-money prompt. Product funds are credited only after PesaJet confirms settlement.' });
         } else {
           setModal(null);
         }
+      },
+    });
+  };
+  const submitPurchase = () => {
+    if (!selectedProduct) return;
+    buyProduct.mutate({ data: { productId: selectedProduct.id } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries();
+        setModal(null);
+        setSelectedProduct(null);
+        toast({ title: 'Product purchased', description: 'Your product funds were used. Earnings remain in your withdrawable wallet.' });
       },
     });
   };
@@ -313,12 +332,12 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
     setDismissedAnnouncement(announcementKey);
   };
   let view: ReactNode;
-  if (active === 'products') view = <ProductsView products={products.data} loading={products.isLoading} error={!!products.error} onBuy={openPayment} currency={currency} payments={payments.data} onCheckPayment={openPaymentStatus} />;
+  if (active === 'products') view = <ProductsView products={products.data} loading={products.isLoading} error={!!products.error} onBuy={openPurchase} currency={currency} payments={payments.data} onCheckPayment={openPaymentStatus} depositBalance={userData.depositBalance} onDeposit={() => openDeposit()} />;
   else if (active === 'purchases') view = <PurchasesView purchases={purchases.data} loading={purchases.isLoading} error={!!purchases.error} currency={currency} onBrowse={() => setActive('products')} />;
   else if (active === 'referrals') view = <ReferralView referrals={referrals.data} loading={referrals.isLoading} error={!!referrals.error} currency={currency} />;
   else if (active === 'account') view = <AccountPage user={userData} settings={settings.data} withdrawals={withdrawals.data} withdrawalsLoading={withdrawals.isLoading} withdrawalsError={!!withdrawals.error} currency={currency} canWithdraw={dashboard.data?.canWithdraw} onDeposit={() => setActive('products')} onWithdraw={() => setModal('withdrawal')} onLogout={onLogout} loggingOut={loggingOut} />;
   else view = <OverviewView dashboard={dashboard.data} loading={dashboard.isLoading} error={!!dashboard.error} currency={currency} settings={settings.data} onCheckin={claim} checkingIn={checkin.isPending} onWithdraw={() => setModal('withdrawal')} onBuy={() => setActive('products')} />;
-  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'payment' && selectedProduct && <PaymentModal product={selectedProduct} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitPaymentForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'payment-status' && selectedPaymentId && <PaymentStatusModal paymentId={selectedPaymentId} onClose={() => { setModal(null); queryClient.invalidateQueries(); }} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} settings={settings.data} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}{settings.data?.announcementEnabled && dismissedAnnouncement !== announcementKey && <Modal title={settings.data.announcementTitle || 'Grand Crown update'} onClose={dismissAnnouncement}><div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{settings.data.announcementMessage || 'There are no additional details yet.'}</div><Button className="mt-6 w-full" onClick={dismissAnnouncement}>Continue</Button></Modal>}</>;
+  return <>{experiencePhoto && <div aria-hidden className="gc-experience-backdrop pointer-events-none fixed inset-0 z-0 lg:left-72"><img src={experiencePhoto} alt="" className="size-full object-cover object-center" /></div>}<div className={experiencePhoto ? 'dark gc-experience-content' : ''}>{view}</div>{modal === 'deposit' && <DepositModal amount={depositAmount} setAmount={setDepositAmount} settings={settings.data} values={payment} setValues={setPayment} onClose={() => setModal(null)} onSubmit={submitDepositForm} pending={submitPayment.isPending} error={!!submitPayment.error} />}{modal === 'payment-status' && selectedPaymentId && <PaymentStatusModal paymentId={selectedPaymentId} onClose={() => { setModal(null); queryClient.invalidateQueries(); }} />}{modal === 'purchase' && selectedProduct && <PurchaseModal product={selectedProduct} depositBalance={userData.depositBalance} currency={currency} onClose={() => setModal(null)} onPurchase={submitPurchase} onDeposit={amount => openDeposit(amount)} pending={buyProduct.isPending} error={!!buyProduct.error} />}{modal === 'withdrawal' && <WithdrawModal balance={userData.wallet} currency={currency} settings={settings.data} values={withdrawal} setValues={setWithdrawal} onClose={() => setModal(null)} onSubmit={submitWithdrawalForm} pending={requestWithdrawal.isPending} error={!!requestWithdrawal.error} />}{settings.data?.announcementEnabled && dismissedAnnouncement !== announcementKey && <Modal title={settings.data.announcementTitle || 'Grand Crown update'} onClose={dismissAnnouncement}><div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{settings.data.announcementMessage || 'There are no additional details yet.'}</div><Button className="mt-6 w-full" onClick={dismissAnnouncement}>Continue</Button></Modal>}</>;
 }
 
 function PageHeading({ eyebrow, title, copy, action }: { eyebrow: string; title: string; copy: string; action?: ReactNode }) {

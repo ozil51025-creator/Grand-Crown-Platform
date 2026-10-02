@@ -60,7 +60,7 @@ export function PlanCatalogue({ products, loading, error, onBuy, currency }: { p
                 <Stat icon={CalendarDays} label="Term" value={`${product.days} days`} tone={tone} />
                 <Stat icon={TrendingUp} label="Total vs price" value={product.price ? `${Math.round((product.total / product.price) * 100)}%` : '—'} tone={tone} />
               </div>
-              <button data-testid={`button-buy-product-${product.id}`} onClick={() => onBuy(product)} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[hsl(160_45%_14%)] px-4 text-sm font-semibold text-accent transition hover:bg-[hsl(160_45%_20%)]">Invest in this package <ArrowUpRight className="size-4" /></button>
+              <button data-testid={`button-buy-product-${product.id}`} onClick={() => onBuy(product)} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[hsl(160_45%_14%)] px-4 text-sm font-semibold text-accent transition hover:bg-[hsl(160_45%_20%)]">Buy with product funds <ArrowUpRight className="size-4" /></button>
             </div>
           </article>;
         })}
