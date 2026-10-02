@@ -29,6 +29,21 @@ export type User = {
   banned: boolean;
 };
 
+type AdminAccount = {
+  id: string;
+  username: string;
+  passwordHash: string;
+  passwordSalt: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+};
+
+type AdminSession = {
+  expiresAt: number;
+  accountId: string | null;
+  isOwner: boolean;
+};
+
 type Purchase = {
   id: string;
   paymentId: string;
@@ -104,6 +119,7 @@ export type Data = {
   settings: Settings;
   products: Product[];
   users: User[];
+  adminAccounts: AdminAccount[];
   purchases: Purchase[];
   transactions: Transaction[];
   activity: Activity[];
@@ -144,7 +160,7 @@ const dataFile = path.resolve(
     path.join(process.cwd(), "artifacts/api-server/data.json"),
 );
 const userSessions = new Map<string, { userId: string; expiresAt: number }>();
-const adminSessions = new Map<string, number>();
+const adminSessions = new Map<string, AdminSession>();
 const loginAttempts = new Map<string, number[]>();
 const sessionTtl = 12 * 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
@@ -166,6 +182,7 @@ function readData(): Data {
       users: Array.isArray(raw.users)
         ? raw.users.map((user) => ({ ...user, banned: Boolean(user.banned) }))
         : [],
+      adminAccounts: Array.isArray(raw.adminAccounts) ? raw.adminAccounts : [],
       purchases: Array.isArray(raw.purchases) ? raw.purchases : [],
       transactions: Array.isArray(raw.transactions) ? raw.transactions : [],
       activity: Array.isArray(raw.activity) ? raw.activity : [],
@@ -178,6 +195,7 @@ function readData(): Data {
       settings: defaultSettings,
       products: defaultProducts,
       users: [],
+      adminAccounts: [],
       purchases: [],
       transactions: [],
       activity: [],
@@ -211,6 +229,16 @@ function verifyPassword(password: string, user: User) {
       return expected.length === legacy.length && crypto.timingSafeEqual(expected, legacy);
     }
     return false;
+  } catch {
+    return false;
+  }
+}
+
+function verifyAdminPassword(password: string, admin: AdminAccount) {
+  try {
+    const expected = Buffer.from(admin.passwordHash, "hex");
+    const actual = crypto.scryptSync(password, admin.passwordSalt, 64);
+    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
   } catch {
     return false;
   }
@@ -272,14 +300,18 @@ function currentUser(req: Request, data: Data) {
   return user?.banned ? undefined : user;
 }
 
-function isAdmin(req: Request) {
+function currentAdminSession(req: Request) {
   const token = cookieValue(req, "gc_admin");
-  const expiresAt = token ? adminSessions.get(token) : undefined;
-  if (!expiresAt || expiresAt < Date.now()) {
+  const session = token ? adminSessions.get(token) : undefined;
+  if (!session || session.expiresAt < Date.now()) {
     if (token) adminSessions.delete(token);
-    return false;
+    return undefined;
   }
-  return true;
+  return session;
+}
+
+function isAdmin(req: Request) {
+  return Boolean(currentAdminSession(req));
 }
 
 function requireUser(req: Request, res: Response, data: Data) {
@@ -294,6 +326,19 @@ function requireUser(req: Request, res: Response, data: Data) {
 function requireAdmin(req: Request, res: Response) {
   if (!isAdmin(req)) {
     res.status(401).json({ error: "Administrator login required" });
+    return false;
+  }
+  return true;
+}
+
+function requireOwnerAdmin(req: Request, res: Response) {
+  const session = currentAdminSession(req);
+  if (!session) {
+    res.status(401).json({ error: "Administrator login required" });
+    return false;
+  }
+  if (!session.isOwner) {
+    res.status(403).json({ error: "Owner administrator access required" });
     return false;
   }
   return true;
@@ -654,13 +699,24 @@ router.post("/withdrawals", (req, res) => {
 
 router.post("/admin/auth/login", (req, res) => {
   if (rateLimited(req, "admin-login", 5)) return res.status(429).json({ error: "Too many admin login attempts. Try again later." });
-  const username = process.env["ADMIN_USER"] ?? "admin";
-  const password = process.env["ADMIN_PASS"] ?? "change-me-now";
-  if (bodyString(req, "username") !== username || bodyString(req, "password") !== password) {
+  const username = bodyString(req, "username");
+  const password = bodyPassword(req);
+  const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
+  const ownerPassword = process.env["ADMIN_PASS"] ?? "change-me-now";
+  const data = readData();
+  const isOwner = username.toLowerCase() === ownerUsername.toLowerCase() && password === ownerPassword;
+  const account = isOwner
+    ? undefined
+    : data.adminAccounts.find((item) => item.username.toLowerCase() === username.toLowerCase());
+  if (!isOwner && (!account || !verifyAdminPassword(password, account))) {
     return res.status(401).json({ error: "Invalid administrator login" });
   }
+  if (account) {
+    account.lastLoginAt = now();
+    writeData(data);
+  }
   const token = crypto.randomBytes(32).toString("hex");
-  adminSessions.set(token, Date.now() + sessionTtl);
+  adminSessions.set(token, { expiresAt: Date.now() + sessionTtl, accountId: account?.id ?? null, isOwner });
   setCookie(res, "gc_admin", token, sessionTtl / 1000);
   return res.json({ ok: true });
 });
@@ -669,6 +725,88 @@ router.post("/admin/auth/logout", (req, res) => {
   const token = cookieValue(req, "gc_admin");
   if (token) adminSessions.delete(token);
   setCookie(res, "gc_admin", "", 0);
+  return res.json({ ok: true });
+});
+
+router.get("/admin/admins", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const session = currentAdminSession(req)!;
+  const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
+  const data = readData();
+  return res.json({
+    canManage: session.isOwner,
+    admins: [
+      {
+        id: "owner",
+        username: ownerUsername,
+        role: "Owner",
+        createdAt: null,
+        lastLoginAt: null,
+        isCurrent: session.isOwner,
+      },
+      ...data.adminAccounts.map((account) => ({
+        id: account.id,
+        username: account.username,
+        role: "Admin",
+        createdAt: account.createdAt,
+        lastLoginAt: account.lastLoginAt,
+        isCurrent: session.accountId === account.id,
+      })),
+    ],
+  });
+});
+
+router.post("/admin/admins", (req, res) => {
+  if (!requireOwnerAdmin(req, res)) return;
+  const username = bodyString(req, "username");
+  const password = bodyPassword(req);
+  if (!/^[A-Za-z0-9._-]{3,32}$/.test(username) || password.length < 8 || password.length > 128) {
+    return res.status(400).json({ error: "Use a 3–32 character username and a password of 8–128 characters" });
+  }
+  const data = readData();
+  const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
+  if (
+    username.toLowerCase() === ownerUsername.toLowerCase() ||
+    data.adminAccounts.some((account) => account.username.toLowerCase() === username.toLowerCase())
+  ) {
+    return res.status(409).json({ error: "That administrator username is already in use" });
+  }
+  const passwordParts = hashPassword(password);
+  const account: AdminAccount = {
+    id: id("ADM"),
+    username,
+    passwordHash: passwordParts.hash,
+    passwordSalt: passwordParts.salt,
+    createdAt: now(),
+    lastLoginAt: null,
+  };
+  data.adminAccounts.push(account);
+  data.activity.push({ id: id("ACT"), type: "admin_created", createdAt: now() });
+  writeData(data);
+  return res.status(201).json({
+    id: account.id,
+    username: account.username,
+    role: "Admin",
+    createdAt: account.createdAt,
+    lastLoginAt: account.lastLoginAt,
+    isCurrent: false,
+  });
+});
+
+router.delete("/admin/admins/:id", (req, res) => {
+  if (!requireOwnerAdmin(req, res)) return;
+  const data = readData();
+  const index = data.adminAccounts.findIndex((account) => account.id === req.params.id);
+  if (index < 0) {
+    res.status(404).json({ error: "Administrator account not found" });
+    return;
+  }
+  const [account] = data.adminAccounts.splice(index, 1);
+  for (const [token, session] of adminSessions) {
+    if (session.accountId === account.id) adminSessions.delete(token);
+  }
+  data.activity.push({ id: id("ACT"), type: "admin_deleted", createdAt: now() });
+  writeData(data);
   return res.json({ ok: true });
 });
 
