@@ -277,6 +277,18 @@
       "userId": "USR-17B5675666A15F",
       "type": "deposit_failed",
       "createdAt": "2026-10-02T05:45:33.997Z"
+    },
+    {
+      "id": "ACT-0BA835BC9E48D7",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_initiated",
+      "createdAt": "2026-10-02T05:46:13.377Z"
+    },
+    {
+      "id": "ACT-C0B340C69094A7",
+      "userId": "USR-17B5675666A15F",
+      "type": "deposit_failed",
+      "createdAt": "2026-10-02T05:46:13.733Z"
     }
   ],
   "payments": [
@@ -325,6 +337,17 @@
       "providerRequestStartedAt": "2026-10-02T05:45:33.642Z",
       "status": "failed",
       "createdAt": "2026-10-02T05:45:33.642Z"
+    },
+    {
+      "id": "PAY-D77ED5EA98CF9F",
+      "userId": "USR-17B5675666A15F",
+      "amount": 50000,
+      "method": "MTN Mobile Money",
+      "payerPhone": "0730088005",
+      "transactionId": "GC-636271327EBB3C45D8616356",
+      "providerRequestStartedAt": "2026-10-02T05:46:13.377Z",
+      "status": "failed",
+      "createdAt": "2026-10-02T05:46:13.377Z"
     }
   ],
   "withdrawals": [],

@@ -160,6 +160,10 @@ if (!bundle) {
     const app = express();
     app.set("trust proxy", true);
     app.use(express.json());
+    app.use((req, _res, next) => {
+      req.log = { warn() {} };
+      next();
+    });
     app.use(router);
     server = app.listen(0, "127.0.0.1");
     await once(server, "listening");
@@ -313,6 +317,63 @@ if (!bundle) {
       assert.deepEqual(webhook.body, { received: true });
     }
     assert.equal(JSON.stringify(readStore()), afterPurchase);
+  });
+
+  test("PesaJet rejects unsigned or mismatched settlement events without crediting deposits", async () => {
+    const member = await register();
+    const created = await request("/payments", {
+      method: "POST",
+      cookie: member.cookie,
+      body: { amount: 6500, method: "Airtel Money", payerPhone: "+256700000001" },
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.status, "pending");
+    const pendingStore = JSON.stringify(readStore());
+    const settlement = {
+      event: "payment.completed",
+      reference: created.body.payment.transactionId,
+      transactionId: created.body.payment.providerTransactionId,
+      amount: 6500,
+      currency: "UGX",
+      status: "COMPLETED",
+      provider: "airtel",
+    };
+
+    const unsigned = await request("/webhooks/pesajet", {
+      method: "POST",
+      body: settlement,
+      headers: { "X-Webhook-Signature": "0".repeat(64) },
+    });
+    assert.equal(unsigned.status, 401);
+    assert.equal(JSON.stringify(readStore()), pendingStore);
+
+    const mismatches = [
+      { amount: 6501 },
+      { currency: "USD" },
+      { provider: "mtn" },
+    ];
+    for (const mismatch of mismatches) {
+      const payload = { ...settlement, ...mismatch };
+      const result = await request("/webhooks/pesajet", {
+        method: "POST",
+        body: payload,
+        headers: { "X-Webhook-Signature": signPesaJetPayload(payload) },
+      });
+      assert.equal(result.status, 400);
+      assert.equal(JSON.stringify(readStore()), pendingStore);
+    }
+    const unknownReference = { ...settlement, reference: "GC-UNKNOWN-REFERENCE" };
+    const ignored = await request("/webhooks/pesajet", {
+      method: "POST",
+      body: unknownReference,
+      headers: { "X-Webhook-Signature": signPesaJetPayload(unknownReference) },
+    });
+    assert.equal(ignored.status, 200);
+    assert.deepEqual(ignored.body, { received: true });
+    assert.equal(JSON.stringify(readStore()), pendingStore);
+    const storedMember = readStore().users.find((user) => user.id === member.user.id);
+    assert.equal(storedMember.depositBalance, 0);
+    assert.equal(readStore().transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
   });
 
   test("wrong current password, same password and invalid bounds do not change credentials", async () => {
