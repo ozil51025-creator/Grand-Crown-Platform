@@ -1,10 +1,10 @@
 ---
 name: Grand Crown test storage
-description: Why the current Grand Crown build uses local JSON storage and what must change before production.
+description: Runtime persistence uses PostgreSQL JSONB and hashed sessions; local JSON storage is test-only.
 ---
 
-The current Grand Crown build deliberately uses atomic JSON-file storage and in-memory sessions so the uploaded platform can run immediately without external service setup.
+Grand Crown runtime state preserves its existing JSON document shape in PostgreSQL JSONB, and sessions persist as hashed tokens. The `GRAND_CROWN_DATA_FILE` option is for isolated tests only and must never be enabled in production.
 
-**Why:** The requested outcome was a working test link from an incomplete upload, and the existing source already modeled its records in JSON.
+**Why:** The migration preserves the existing ledger structure while making state and sessions durable across API restarts.
 
-**How to apply:** Keep this storage strategy for local testing only. Before real-money production use, migrate records and sessions to persistent, backed-up storage and replace the default admin credentials.
+**How to apply:** Keep the JSON file adapter isolated to tests. Runtime startup must fail if the PostgreSQL state row is missing; preserve the JSON document shape and ensure production backups and owner credentials are ready before publishing.

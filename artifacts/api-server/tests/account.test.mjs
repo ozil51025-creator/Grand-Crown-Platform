@@ -409,7 +409,7 @@ if (!bundle) {
     assert.equal(result.body.withdrawal.netAmount, 2551);
     assert.equal(readStore().users.find((user) => user.id === member.user.id).wallet, 1999);
 
-    const unactivated = await register();
+    const unactivated = await register("0700000002");
     const unactivatedData = readStore();
     unactivatedData.users.find((user) => user.id === unactivated.user.id).wallet = 5000;
     saveStore(unactivatedData);
@@ -479,7 +479,7 @@ if (!bundle) {
     stored = readStore();
     assert.equal(stored.settings.cycleDays, 1);
     assert.equal(stored.users.find((user) => user.id === member.user.id).wallet, startingWallet + 300);
-    assert.equal(
+    assert.deepEqual(
       stored.transactions.filter((item) => item.type === "daily_earning" && item.purchaseId === purchase.id)
         .map((item) => item.day).sort(),
       [1, 2, 3],
