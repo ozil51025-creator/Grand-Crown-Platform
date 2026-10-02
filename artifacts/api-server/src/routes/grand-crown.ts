@@ -1104,13 +1104,16 @@ router.post("/withdrawals", async (req, res) => {
   return res.status(201).json({ ok: true, withdrawal });
 });
 
-router.post("/admin/auth/login", (req, res) => {
+router.post("/admin/auth/login", async (req, res) => {
   if (rateLimited(req, "admin-login", 5)) return res.status(429).json({ error: "Too many admin login attempts. Try again later." });
   const username = bodyString(req, "username");
   const password = bodyPassword(req);
   const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
-  const ownerPassword = process.env["ADMIN_PASS"] ?? "change-me-now";
-  const data = readData();
+  const ownerPassword = process.env["ADMIN_PASS"] ?? (process.env["NODE_ENV"] === "production" ? "" : "change-me-now");
+  if (process.env["NODE_ENV"] === "production" && (!ownerPassword || ownerPassword === "change-me-now")) {
+    return res.status(503).json({ error: "Owner administrator credentials have not been configured." });
+  }
+  const data = await readData();
   const isOwner = username.toLowerCase() === ownerUsername.toLowerCase() && password === ownerPassword;
   const account = isOwner
     ? undefined
@@ -1118,28 +1121,37 @@ router.post("/admin/auth/login", (req, res) => {
   if (!isOwner && (!account || !verifyAdminPassword(password, account))) {
     return res.status(401).json({ error: "Invalid administrator login" });
   }
-  if (account) {
-    account.lastLoginAt = now();
-    writeData(data);
-  }
+  if (account) account.lastLoginAt = now();
   const token = crypto.randomBytes(32).toString("hex");
-  adminSessions.set(token, { expiresAt: Date.now() + sessionTtl, accountId: account?.id ?? null, isOwner });
+  data.sessions.push({
+    kind: "admin",
+    tokenHash: sessionTokenHash(token),
+    expiresAt: Date.now() + sessionTtl,
+    accountId: account?.id ?? null,
+    isOwner,
+  });
+  await writeData(data);
   setCookie(res, "gc_admin", token, sessionTtl / 1000);
   return res.json({ ok: true });
 });
 
-router.post("/admin/auth/logout", (req, res) => {
+router.post("/admin/auth/logout", async (req, res) => {
   const token = cookieValue(req, "gc_admin");
-  if (token) adminSessions.delete(token);
+  if (token) {
+    const data = await readData();
+    const tokenHash = sessionTokenHash(token);
+    data.sessions = data.sessions.filter((session) => session.tokenHash !== tokenHash);
+    await writeData(data);
+  }
   setCookie(res, "gc_admin", "", 0);
   return res.json({ ok: true });
 });
 
-router.get("/admin/admins", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const session = currentAdminSession(req)!;
+router.get("/admin/admins", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
+  const session = currentAdminSession(req, data)!;
   const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
-  const data = readData();
   return res.json({
     canManage: session.isOwner,
     admins: [
@@ -1163,14 +1175,14 @@ router.get("/admin/admins", (req, res) => {
   });
 });
 
-router.post("/admin/admins", (req, res) => {
-  if (!requireOwnerAdmin(req, res)) return;
+router.post("/admin/admins", async (req, res) => {
+  if (!(await requireOwnerAdmin(req, res))) return;
   const username = bodyString(req, "username");
   const password = bodyPassword(req);
   if (!/^[A-Za-z0-9._-]{3,32}$/.test(username) || password.length < 8 || password.length > 128) {
     return res.status(400).json({ error: "Use a 3–32 character username and a password of 8–128 characters" });
   }
-  const data = readData();
+  const data = await readData();
   const ownerUsername = process.env["ADMIN_USER"] ?? "admin";
   if (
     username.toLowerCase() === ownerUsername.toLowerCase() ||
@@ -1189,7 +1201,7 @@ router.post("/admin/admins", (req, res) => {
   };
   data.adminAccounts.push(account);
   data.activity.push({ id: id("ACT"), type: "admin_created", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.status(201).json({
     id: account.id,
     username: account.username,
@@ -1200,26 +1212,26 @@ router.post("/admin/admins", (req, res) => {
   });
 });
 
-router.delete("/admin/admins/:id", (req, res) => {
-  if (!requireOwnerAdmin(req, res)) return;
-  const data = readData();
+router.delete("/admin/admins/:id", async (req, res) => {
+  if (!(await requireOwnerAdmin(req, res))) return;
+  const data = await readData();
   const index = data.adminAccounts.findIndex((account) => account.id === req.params.id);
   if (index < 0) {
     res.status(404).json({ error: "Administrator account not found" });
     return;
   }
   const [account] = data.adminAccounts.splice(index, 1);
-  for (const [token, session] of adminSessions) {
-    if (session.accountId === account.id) adminSessions.delete(token);
-  }
+  data.sessions = data.sessions.filter(
+    (session) => session.kind !== "admin" || session.accountId !== account.id,
+  );
   data.activity.push({ id: id("ACT"), type: "admin_deleted", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true });
 });
 
-router.get("/admin/dashboard", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.get("/admin/dashboard", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   return res.json({
     users: data.users.length,
     products: data.products.length,
@@ -1237,14 +1249,14 @@ router.get("/admin/dashboard", (req, res) => {
   });
 });
 
-router.get("/admin/users", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().users.map(publicUser));
+router.get("/admin/users", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).users.map(publicUser));
 });
 
-router.post("/admin/users/:id/credit", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.post("/admin/users/:id/credit", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const user = data.users.find((item) => item.id === req.params.id);
   const amount = bodyNumber(req, "amount");
   const note = bodyString(req, "note");
@@ -1254,13 +1266,13 @@ router.post("/admin/users/:id/credit", (req, res) => {
   user.totalEarned += amount;
   addTransaction(data, user.id, "admin_credit", amount);
   data.activity.push({ id: id("ACT"), userId: user.id, type: note ? `admin_credit:${note.slice(0, 80)}` : "admin_credit", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true, user: publicUser(user) });
 });
 
-router.post("/admin/users/:id/debit", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.post("/admin/users/:id/debit", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const user = data.users.find((item) => item.id === req.params.id);
   const amount = bodyNumber(req, "amount");
   const note = bodyString(req, "note");
@@ -1270,33 +1282,33 @@ router.post("/admin/users/:id/debit", (req, res) => {
   user.wallet -= amount;
   addTransaction(data, user.id, "admin_debit", -amount);
   data.activity.push({ id: id("ACT"), userId: user.id, type: note ? `admin_debit:${note.slice(0, 80)}` : "admin_debit", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true, user: publicUser(user) });
 });
 
-router.put("/admin/users/:id/ban", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.put("/admin/users/:id/ban", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const user = data.users.find((item) => item.id === req.params.id);
   const banned = (req.body as Record<string, unknown> | undefined)?.banned;
   if (!user) return res.status(404).json({ error: "User not found" });
   if (typeof banned !== "boolean") return res.status(400).json({ error: "Banned must be true or false" });
   user.banned = banned;
   if (banned) {
-    for (const [token, session] of userSessions) {
-      if (session.userId === user.id) userSessions.delete(token);
-    }
+    data.sessions = data.sessions.filter(
+      (session) => session.kind !== "user" || session.userId !== user.id,
+    );
   }
   data.activity.push({ id: id("ACT"), userId: user.id, type: banned ? "user_banned" : "user_unbanned", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   return res.json({ ok: true, user: publicUser(user) });
 });
 
-router.post("/admin/users/:id/password", (req, res) => {
-  if (!requireAdmin(req, res)) return;
+router.post("/admin/users/:id/password", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
   const rawId = req.params.id;
   const userId = Array.isArray(rawId) ? rawId[0] : rawId;
-  const data = readData();
+  const data = await readData();
   const user = data.users.find((item) => item.id === userId);
   if (!user) {
     res.status(404).json({ error: "User not found" });
@@ -1311,17 +1323,17 @@ router.post("/admin/users/:id/password", (req, res) => {
   user.passwordHash = password.hash;
   user.passwordSalt = password.salt;
   user.passwordFormat = "raw";
-  for (const [token, session] of userSessions) {
-    if (session.userId === user.id) userSessions.delete(token);
-  }
+  data.sessions = data.sessions.filter(
+    (session) => session.kind !== "user" || session.userId !== user.id,
+  );
   data.activity.push({ id: id("ACT"), userId: user.id, type: "admin_password_reset", createdAt: now() });
-  writeData(data);
+  await writeData(data);
   res.json({ ok: true });
 });
 
-router.delete("/admin/users/:id", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.delete("/admin/users/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const userIndex = data.users.findIndex((item) => item.id === req.params.id);
   if (userIndex < 0) return res.status(404).json({ error: "User not found" });
   const userId = req.params.id;
@@ -1334,19 +1346,19 @@ router.delete("/admin/users/:id", (req, res) => {
   data.withdrawals = data.withdrawals.filter((item) => item.userId !== userId);
   data.transactions = data.transactions.filter((item) => item.userId !== userId);
   data.activity = data.activity.filter((item) => item.userId !== userId);
-  for (const [token, session] of userSessions) {
-    if (session.userId === userId) userSessions.delete(token);
-  }
-  writeData(data);
+  data.sessions = data.sessions.filter(
+    (session) => session.kind !== "user" || session.userId !== userId,
+  );
+  await writeData(data);
   return res.json({ ok: true });
 });
-router.get("/admin/payments", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().payments);
+router.get("/admin/payments", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).payments);
 });
-router.put("/admin/payments/:id", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.put("/admin/payments/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const rawId = req.params.id;
   const paymentId = Array.isArray(rawId) ? rawId[0] : rawId;
   const payment = data.payments.find((item) => item.id === paymentId);
@@ -1385,39 +1397,39 @@ router.put("/admin/payments/:id", (req, res) => {
     payment.status = "rejected";
     data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_rejected", createdAt: payment.reviewedAt });
   }
-  writeData(data);
+  await writeData(data);
   res.json({ ok: true, paymentId: payment.id, status: payment.status, payment });
 });
-router.get("/admin/withdrawals", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().withdrawals);
+router.get("/admin/withdrawals", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).withdrawals);
 });
-router.get("/admin/products", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().products);
+router.get("/admin/products", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).products);
 });
-router.get("/admin/transactions", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().transactions.slice().reverse());
+router.get("/admin/transactions", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).transactions.slice().reverse());
 });
-router.get("/admin/activity", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().activity.slice().reverse());
+router.get("/admin/activity", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).activity.slice().reverse());
 });
-router.get("/admin/referrals", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.get("/admin/referrals", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const commissions = data.transactions.filter((item) => item.type === "referral_commission");
   return res.json({ commissions: commissions.length, total: commissions.reduce((sum, item) => sum + item.amount, 0) });
 });
-router.get("/admin/settings", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  return res.json(readData().settings);
+router.get("/admin/settings", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  return res.json((await readData()).settings);
 });
 
-router.put("/admin/withdrawals/:id", (req, res) => {
-  if (!requireAdmin(req, res)) return;
-  const data = readData();
+router.put("/admin/withdrawals/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const data = await readData();
   const withdrawal = data.withdrawals.find((item) => item.id === req.params.id);
   const action = bodyString(req, "action");
   if (!withdrawal) return res.status(404).json({ error: "Withdrawal not found" });
