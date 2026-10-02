@@ -448,7 +448,7 @@ export interface Withdrawal {
 }
 
 export interface WithdrawalInput {
-  /** @minimum 7000 */
+  /** @minimum 3000 */
   amount: number;
   method: string;
   phone: string;

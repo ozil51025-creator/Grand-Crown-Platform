@@ -323,7 +323,7 @@ export const GetWithdrawalsResponseItem = zod.object({
 export const GetWithdrawalsResponse = zod.array(GetWithdrawalsResponseItem)
 
 
-export const requestWithdrawalBodyAmountMin = 7000;
+export const requestWithdrawalBodyAmountMin = 3000;
 
 
 
