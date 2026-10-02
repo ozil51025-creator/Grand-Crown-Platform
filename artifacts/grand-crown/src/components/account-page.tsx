@@ -108,7 +108,7 @@ export function AccountPage({ user, settings, withdrawals, withdrawalsLoading, w
       <button data-testid="button-footer-terms" onClick={() => { setOpen('terms'); document.querySelector('[data-testid="button-account-menu-terms"]')?.scrollIntoView({ block: 'center' }); }} className="mt-4 inline-flex items-center gap-2 text-xs text-white/70 hover:text-white">Terms &amp; conditions<ArrowUpRight className="size-3.5" /></button>
     </footer>
 
-    {walletOpen && <WalletSheet user={user} currency={currency} withdrawals={withdrawals} loading={withdrawalsLoading} error={withdrawalsError} canWithdraw={canWithdraw} onClose={() => setWalletOpen(false)} onWithdraw={() => { setWalletOpen(false); onWithdraw(); }} onDeposit={() => { setWalletOpen(false); onDeposit(); }} />}
+    {walletOpen && <WalletSheet user={user} settings={settings} currency={currency} withdrawals={withdrawals} loading={withdrawalsLoading} error={withdrawalsError} canWithdraw={canWithdraw} onClose={() => setWalletOpen(false)} onWithdraw={() => { setWalletOpen(false); onWithdraw(); }} onDeposit={() => { setWalletOpen(false); onDeposit(); }} />}
   </div>;
 }
 
@@ -206,7 +206,7 @@ function TermsBody({ settings, adminUrl, adminHandle }: { settings?: PublicSetti
   return <div data-testid="text-terms" className="max-h-96 overflow-y-auto whitespace-pre-wrap pr-1 text-sm leading-6 text-white/80">{text}</div>;
 }
 
-function WalletSheet({ user, currency, withdrawals, loading, error, canWithdraw, onClose, onWithdraw, onDeposit }: { user: User; currency: string; withdrawals?: Withdrawal[]; loading: boolean; error: boolean; canWithdraw?: boolean; onClose: () => void; onWithdraw: () => void; onDeposit: () => void }) {
+function WalletSheet({ user, settings, currency, withdrawals, loading, error, canWithdraw, onClose, onWithdraw, onDeposit }: { user: User; settings?: PublicSettings; currency: string; withdrawals?: Withdrawal[]; loading: boolean; error: boolean; canWithdraw?: boolean; onClose: () => void; onWithdraw: () => void; onDeposit: () => void }) {
   const { toast } = useToast();
   const copy = async () => {
     try {
