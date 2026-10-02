@@ -553,9 +553,12 @@ if (!bundle) {
     const member = await register();
     await createGift("PRESERVE");
     const before = readStore();
+    const settings = (await request("/admin/settings", { cookie: adminCookie })).body;
     const terms = `  Terms\n${"x".repeat(19990)}  `;
     assert.equal(terms.length, 20000);
-    const updated = await request("/admin/settings", { method: "PUT", cookie: adminCookie, body: { termsText: terms } });
+    const updated = await request("/admin/settings", {
+      method: "PUT", cookie: adminCookie, body: { ...settings, termsText: terms },
+    });
     assert.equal(updated.status, 200);
     assert.equal(updated.body.termsText, terms);
     assert.equal(updated.body.brand, before.settings.brand);
@@ -571,18 +574,23 @@ if (!bundle) {
       method: "PUT", cookie: adminCookie, body: { termsText: null },
     })).status, 400);
     assert.ok(JSON.stringify(readStore()) === JSON.stringify(unchanged));
-    const brand = await request("/admin/settings", { method: "PUT", cookie: adminCookie, body: { brand: "Updated brand" } });
+    const brand = await request("/admin/settings", {
+      method: "PUT", cookie: adminCookie, body: { ...updated.body, brand: "Updated brand" },
+    });
     assert.equal(brand.status, 200);
     assert.equal(brand.body.termsText, terms);
     assert.equal(brand.body.supportHandle, before.settings.supportHandle);
     const fullSettings = await request("/admin/settings", {
-      method: "PUT", cookie: adminCookie, body: { currency: "UGX", supportHandle: "@updated", payeeName: "Updated payee" },
+      method: "PUT", cookie: adminCookie,
+      body: { ...brand.body, currency: "UGX", supportHandle: "@updated", payeeName: "Updated payee" },
     });
     assert.equal(fullSettings.status, 200);
     assert.equal(fullSettings.body.supportHandle, "@updated");
     assert.equal(fullSettings.body.payeeName, "Updated payee");
     assert.equal((await redeem(member.cookie, "PRESERVE")).status, 200);
-    const cleared = await request("/admin/settings", { method: "PUT", cookie: adminCookie, body: { termsText: "" } });
+    const cleared = await request("/admin/settings", {
+      method: "PUT", cookie: adminCookie, body: { ...fullSettings.body, termsText: "" },
+    });
     assert.equal(cleared.status, 200);
     assert.equal((await request("/settings")).body.termsText, "");
   });
