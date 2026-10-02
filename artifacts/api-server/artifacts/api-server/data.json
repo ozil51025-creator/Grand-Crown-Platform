@@ -149,10 +149,10 @@
       "passwordSalt": "b6b977011574b31bf5f1b5da13136816",
       "referralCode": "468CBF49",
       "referredBy": null,
-      "wallet": 2600,
-      "totalEarned": 2600,
+      "wallet": 2650,
+      "totalEarned": 2650,
       "createdAt": "2026-09-26T02:44:51.643Z",
-      "lastCheckin": "2026-10-01",
+      "lastCheckin": "2026-10-02",
       "banned": false
     }
   ],
@@ -185,6 +185,13 @@
       "type": "checkin",
       "amount": 500,
       "createdAt": "2026-10-01T20:50:48.102Z"
+    },
+    {
+      "id": "TX-E4B15D8CF7FC9A",
+      "userId": "USR-17B5675666A15F",
+      "type": "checkin",
+      "amount": 50,
+      "createdAt": "2026-10-02T03:34:39.197Z"
     }
   ],
   "activity": [
