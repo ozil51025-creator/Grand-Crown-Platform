@@ -184,7 +184,7 @@ const defaultSettings: Settings = {
   withdrawalMultiple: 0,
   welcomeBonus: 1000,
   checkinBonus: 50,
-  withdrawalFeePercent: 12,
+  withdrawalFeePercent: 10,
   l1CommissionPercent: 10,
   // Four keeps current plan payouts unchanged (the largest existing plan is 3.75x).
   returnMultiple: 4,
@@ -249,6 +249,7 @@ function readData(): Data {
         ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
         ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
         ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
+        ...(rawSettings.withdrawalFeePercent === 12 ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent } : {}),
         ...(rawSettings.withdrawalStartTime === "06:00" ? { withdrawalStartTime: defaultSettings.withdrawalStartTime } : {}),
       },
       products: Array.isArray(raw.products) ? raw.products : defaultProducts,
@@ -1107,7 +1108,9 @@ router.get("/admin/dashboard", (req, res) => {
     transactions: data.transactions.length,
     walletBalances: data.users.reduce((sum, user) => sum + user.wallet, 0),
     productFundBalances: data.users.reduce((sum, user) => sum + user.depositBalance, 0),
-    totalDeposited: data.payments.filter((item) => item.status === "completed").reduce((sum, item) => sum + item.amount, 0),
+    totalDeposited: data.payments
+      .filter((item) => item.status === "completed" || item.status === "approved")
+      .reduce((sum, item) => sum + item.amount, 0),
     totalWithdrawn: data.withdrawals.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0),
     totalInvested: data.purchases.reduce((sum, item) => sum + item.amount, 0),
   });
@@ -1192,6 +1195,32 @@ router.delete("/admin/users/:id", (req, res) => {
 router.get("/admin/payments", (req, res) => {
   if (!requireAdmin(req, res)) return;
   return res.json(readData().payments);
+});
+router.put("/admin/payments/:id", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const data = readData();
+  const payment = data.payments.find((item) => item.id === req.params.id);
+  const action = bodyString(req, "action");
+  if (!payment) return res.status(404).json({ error: "Payment not found" });
+  if (payment.status !== "pending") return res.status(409).json({ error: "Deposit already reviewed" });
+  if (action !== "approve" && action !== "reject") {
+    return res.status(400).json({ error: "Invalid review action" });
+  }
+  payment.reviewedAt = now();
+  if (action === "approve") {
+    const user = data.users.find((item) => item.id === payment.userId);
+    if (!user) return res.status(404).json({ error: "Member account no longer exists" });
+    payment.status = "approved";
+    payment.settledAt = payment.reviewedAt;
+    user.depositBalance += payment.amount;
+    addTransaction(data, payment.userId, "deposit_credit", payment.amount, { paymentId: payment.id });
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_approved", createdAt: payment.reviewedAt });
+  } else {
+    payment.status = "rejected";
+    data.activity.push({ id: id("ACT"), userId: payment.userId, type: "deposit_rejected", createdAt: payment.reviewedAt });
+  }
+  writeData(data);
+  return res.json({ ok: true, status: payment.status, payment });
 });
 router.get("/admin/withdrawals", (req, res) => {
   if (!requireAdmin(req, res)) return;

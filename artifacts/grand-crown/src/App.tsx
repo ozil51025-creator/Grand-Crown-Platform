@@ -43,6 +43,7 @@ import {
   useLogoutUser,
   useRegisterUser,
   useRequestWithdrawal,
+  useReviewPayment,
   useReviewWithdrawal,
   useSubmitPayment,
   useUpdateAdminSettings,
@@ -272,7 +273,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
-  const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone });
+  const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone, payerReference: '' });
   const [depositAmount, setDepositAmount] = useState('500');
   const [withdrawal, setWithdrawal] = useState({ amount: '', method: 'MTN Mobile Money', phone: user.phone });
   const currency = settings.data?.currency || 'UGX';
@@ -287,7 +288,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const openDeposit = (amount?: number) => {
     const minimum = settings.data?.minDeposit ?? 500;
     setDepositAmount(String(Math.max(minimum, amount ?? minimum)));
-    setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone });
+    setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone, payerReference: '' });
     setModal('deposit');
   };
   const openPaymentStatus = (paymentId: string) => { setSelectedPaymentId(paymentId); setModal('payment-status'); };
@@ -299,7 +300,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
         if (result.paymentId) {
           setSelectedPaymentId(result.paymentId);
           setModal('payment-status');
-          toast({ title: 'Deposit request created', description: 'Check your phone for the mobile-money prompt. Product funds are credited only after PesaJet confirms settlement.' });
+          toast({ title: 'Transfer submitted', description: 'Your deposit will be credited to product funds after an administrator verifies the transfer.' });
         } else {
           setModal(null);
         }
@@ -350,7 +351,33 @@ function OverviewView({ dashboard, loading, error, currency, settings, onCheckin
   const activePlan = dashboard?.purchases?.find((purchase: any) => purchase.status === 'active');
   const experienceImage = planImage(activePlan?.productName || 'Presidential Suite');
   const canCheckin = !user?.lastCheckin || user.lastCheckin !== ugandaDateKey();
+  const displayTime = (value?: string) => {
+    if (!value) return '—';
+    const [rawHour, minute] = value.split(':').map(Number);
+    const suffix = rawHour >= 12 ? 'pm' : 'am';
+    const hour = rawHour % 12 || 12;
+    return `${hour}:${String(minute).padStart(2, '0')}${suffix}`;
+  };
   return <div className="animate-rise"><PageHeading eyebrow="Member overview" title={`Good morning${user?.phone ? `, ${user.phone.slice(-4)}` : ''}.`} copy="Your withdrawable earnings and product funds are kept in separate balances." action={<Button data-testid="button-browse-plans" onClick={onBuy}><Package className="size-4" /> Browse products</Button>} />
+    <section data-testid="panel-overview-description" className="mb-5 rounded-3xl border border-white/25 bg-slate-950/35 p-5 text-white shadow-xl backdrop-blur-lg sm:p-7">
+      <div className="font-mono text-[10px] font-semibold uppercase tracking-[.2em] text-amber-200">👑 GRAND CROWN HOTEL &amp; SUITES</div>
+      <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Welcome to Grand Crown — luxury stays with exciting rewards!</h2>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ['🎁 Welcome Bonus', money(settings?.welcomeBonus ?? 1000, currency)],
+          ['📅 Daily Check-in', money(settings?.checkinBonus ?? 50, currency)],
+          ['💰 Referral Bonus', `${settings?.l1CommissionPercent ?? 10}% Level 1`],
+          ['💳 Minimum Top-up', money(settings?.minDeposit ?? 19000, currency)],
+          ['💸 Minimum Withdrawal', money(settings?.minWithdrawal ?? 3000, currency)],
+          ['🔻 Withdrawal Fee', `${settings?.withdrawalFeePercent ?? 10}%`],
+          ['🕙 Withdrawal', `${displayTime(settings?.withdrawalStartTime ?? '10:00')}–${displayTime(settings?.withdrawalEndTime ?? '17:00')} EAT`],
+        ].map(([label, value]) => <div key={label} className="rounded-2xl border border-white/15 bg-white/10 p-4">
+          <div className="text-xs font-medium text-white/70">{label}</div>
+          <div className="mt-2 text-sm font-semibold text-white">{value}</div>
+        </div>)}
+      </div>
+      <p className="mt-5 text-sm leading-6 text-white/85">🏨 Offers from UGX 19,000 to UGX 12,000,000, including Garden View, Mountain View, Ocean View, Executive, Deluxe, Golden, Diamond, Royal &amp; Presidential Suites.</p>
+    </section>
     <QueryState loading={loading} error={error}><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5"><Metric label="Withdrawable balance" value={money(user?.wallet, currency)} icon={Wallet} accent /><Metric label="Product funds" value={money(user?.depositBalance, currency)} icon={ArrowDownToLine} /><Metric label="Total earned" value={money(user?.totalEarned, currency)} icon={TrendingUp} /><Metric label="Active plans" value={String(dashboard?.purchases?.filter((p: any) => p.status === 'active' || p.status === 'approved').length || 0)} icon={Target} /><Metric label="Last check-in" value={user?.lastCheckin ? shortDate(user.lastCheckin) : 'Not yet'} icon={Clock3} /></div>
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr]"><div className="gc-overview-hero relative isolate overflow-hidden rounded-3xl border border-white/20 p-7 text-white shadow-xl sm:p-9" data-testid="panel-overview-experience"><img src={experienceImage} alt={`${activePlan?.productName || 'Presidential Suite'} illustrative room`} loading="lazy" className="absolute inset-0 -z-20 size-full object-cover" /><div className="gc-overview-hero-shade absolute inset-0 -z-10" /><div className="absolute -right-14 -top-24 size-72 rounded-full border border-white/20" /><div className="absolute right-8 top-8 size-28 rounded-full border border-white/25" /><div className="relative"><div className="mb-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.15em] text-accent"><Sparkles className="size-4" /> Daily crown ritual</div><h2 className="max-w-md font-display text-3xl font-semibold leading-tight sm:text-4xl">Small, consistent moves compound.</h2><p className="mt-3 max-w-md text-sm leading-6 text-white/80">Check in each day to keep your account active and claim your daily reward.</p><Button data-testid="button-claim-checkin" onClick={onCheckin} disabled={!canCheckin || checkingIn} className="mt-7 bg-accent text-primary hover:bg-accent/90">{checkingIn ? 'Crediting…' : canCheckin ? 'Claim today’s reward' : 'Checked in today'}<Check className="size-4" /></Button></div></div><div className="rounded-3xl border border-border bg-card p-7"><div className="flex items-center justify-between"><div><div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted-foreground">Withdrawable</div><div className="mt-3 font-display text-3xl font-semibold">{money(user?.wallet, currency)}</div></div><div className="grid size-11 place-items-center rounded-2xl bg-accent/20 text-accent-foreground"><ArrowDownToLine className="size-5" /></div></div><p className="mt-5 text-sm leading-6 text-muted-foreground">Minimum withdrawal is {money(settings?.minWithdrawal ?? 7000, currency)}. Requests are reviewed and paid manually.</p><Button data-testid="button-request-withdrawal" onClick={onWithdraw} variant="outline" className="mt-6 w-full" disabled={!dashboard?.canWithdraw}>Request withdrawal <ArrowUpRight className="size-4" /></Button></div></div>
       <div className="mt-5 rounded-3xl border border-border bg-card p-6"><div className="mb-5 flex items-center justify-between"><div><h2 className="font-display text-2xl font-semibold">Recent activity</h2><p className="mt-1 text-sm text-muted-foreground">The latest movement across your account.</p></div><Activity className="size-5 text-accent-foreground" /></div><ActivityTable transactions={dashboard?.transactions || []} currency={currency} /></div>
