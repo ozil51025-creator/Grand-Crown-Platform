@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { ResetUserPasswordBody, ReviewPaymentBody, SubmitPaymentBody, UpdateAdminSettingsBody } from "@workspace/api-zod";
+import { eq } from "drizzle-orm";
 import { registerAccountRoutes, type StoredGiftCode } from "./account";
 
 type Product = {
@@ -39,11 +40,22 @@ type AdminAccount = {
   lastLoginAt: string | null;
 };
 
+type UserSession = {
+  kind: "user";
+  tokenHash: string;
+  userId: string;
+  expiresAt: number;
+};
+
 type AdminSession = {
+  kind: "admin";
+  tokenHash: string;
   expiresAt: number;
   accountId: string | null;
   isOwner: boolean;
 };
+
+type StoredSession = UserSession | AdminSession;
 
 type Purchase = {
   id: string;
@@ -152,6 +164,7 @@ export type Data = {
   payments: Payment[];
   withdrawals: Withdrawal[];
   giftCodes: StoredGiftCode[];
+  sessions: StoredSession[];
 };
 
 const defaultProducts: Product[] = [
@@ -209,11 +222,17 @@ const dataFile = path.resolve(
   process.env["GRAND_CROWN_DATA_FILE"] ??
     path.join(process.cwd(), "artifacts/api-server/data.json"),
 );
-const userSessions = new Map<string, { userId: string; expiresAt: number }>();
-const adminSessions = new Map<string, AdminSession>();
+const fileStorageEnabled = Boolean(process.env["GRAND_CROWN_DATA_FILE"]);
 const loginAttempts = new Map<string, number[]>();
 const sessionTtl = 12 * 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
+type DatabaseModule = typeof import("@workspace/db");
+let databaseModule: DatabaseModule | undefined;
+
+async function getDatabase(): Promise<DatabaseModule> {
+  databaseModule ??= await import("@workspace/db");
+  return databaseModule;
+}
 
 function now() {
   return new Date().toISOString();
@@ -227,63 +246,69 @@ function id(prefix: string) {
   return `${prefix}-${crypto.randomBytes(7).toString("hex").toUpperCase()}`;
 }
 
-function readData(): Data {
-  try {
+function normalizeData(raw: Partial<Data>): Data {
+  const rawSettings = (raw.settings ?? {}) as Settings & {
+    l2CommissionPercent?: number;
+    l3CommissionPercent?: number;
+  };
+  const hasLegacyReferralLevels =
+    rawSettings.l2CommissionPercent !== undefined ||
+    rawSettings.l3CommissionPercent !== undefined;
+  const {
+    l2CommissionPercent: _legacyLevelTwo,
+    l3CommissionPercent: _legacyLevelThree,
+    ...savedSettings
+  } = rawSettings;
+  return {
+    settings: {
+      ...defaultSettings,
+      ...savedSettings,
+      ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
+      ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
+      ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
+      ...(rawSettings.withdrawalFeePercent === 12 ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent } : {}),
+      ...(rawSettings.withdrawalStartTime === "06:00"
+        ? { withdrawalStartTime: defaultSettings.withdrawalStartTime, restrictWithdrawalsToHours: true }
+        : {}),
+    },
+    products: Array.isArray(raw.products) ? raw.products : defaultProducts,
+    users: Array.isArray(raw.users)
+      ? raw.users.map((user) => ({
+          ...user,
+          depositBalance: Number.isFinite(user.depositBalance) ? user.depositBalance : 0,
+          banned: Boolean(user.banned),
+        }))
+      : [],
+    adminAccounts: Array.isArray(raw.adminAccounts) ? raw.adminAccounts : [],
+    purchases: Array.isArray(raw.purchases) ? raw.purchases : [],
+    transactions: Array.isArray(raw.transactions) ? raw.transactions : [],
+    activity: Array.isArray(raw.activity) ? raw.activity : [],
+    payments: Array.isArray(raw.payments) ? raw.payments : [],
+    withdrawals: Array.isArray(raw.withdrawals) ? raw.withdrawals : [],
+    giftCodes: Array.isArray(raw.giftCodes) ? raw.giftCodes : [],
+    sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
+  };
+}
+
+async function readData(): Promise<Data> {
+  if (fileStorageEnabled) {
     const raw = JSON.parse(fs.readFileSync(dataFile, "utf8")) as Partial<Data>;
-    const rawSettings = (raw.settings ?? {}) as Settings & {
-      l2CommissionPercent?: number;
-      l3CommissionPercent?: number;
-    };
-    const hasLegacyReferralLevels =
-      rawSettings.l2CommissionPercent !== undefined ||
-      rawSettings.l3CommissionPercent !== undefined;
-    const {
-      l2CommissionPercent: _legacyLevelTwo,
-      l3CommissionPercent: _legacyLevelThree,
-      ...savedSettings
-    } = rawSettings;
-    return {
-      settings: {
-        ...defaultSettings,
-        ...savedSettings,
-        ...(hasLegacyReferralLevels ? { l1CommissionPercent: defaultSettings.l1CommissionPercent } : {}),
-        ...(rawSettings.minDeposit === 500 ? { minDeposit: defaultSettings.minDeposit } : {}),
-        ...(rawSettings.minWithdrawal === 7000 ? { minWithdrawal: defaultSettings.minWithdrawal } : {}),
-        ...(rawSettings.withdrawalFeePercent === 12 ? { withdrawalFeePercent: defaultSettings.withdrawalFeePercent } : {}),
-        ...(rawSettings.withdrawalStartTime === "06:00"
-          ? { withdrawalStartTime: defaultSettings.withdrawalStartTime, restrictWithdrawalsToHours: true }
-          : {}),
-      },
-      products: Array.isArray(raw.products) ? raw.products : defaultProducts,
-      users: Array.isArray(raw.users)
-        ? raw.users.map((user) => ({
-            ...user,
-            depositBalance: Number.isFinite(user.depositBalance) ? user.depositBalance : 0,
-            banned: Boolean(user.banned),
-          }))
-        : [],
-      adminAccounts: Array.isArray(raw.adminAccounts) ? raw.adminAccounts : [],
-      purchases: Array.isArray(raw.purchases) ? raw.purchases : [],
-      transactions: Array.isArray(raw.transactions) ? raw.transactions : [],
-      activity: Array.isArray(raw.activity) ? raw.activity : [],
-      payments: Array.isArray(raw.payments) ? raw.payments : [],
-      withdrawals: Array.isArray(raw.withdrawals) ? raw.withdrawals : [],
-      giftCodes: Array.isArray(raw.giftCodes) ? raw.giftCodes : [],
-    };
-  } catch {
-    return {
-      settings: defaultSettings,
-      products: defaultProducts,
-      users: [],
-      adminAccounts: [],
-      purchases: [],
-      transactions: [],
-      activity: [],
-      payments: [],
-      withdrawals: [],
-      giftCodes: [],
-    };
+    return normalizeData(raw);
   }
+  const { db, grandCrownStateTable } = await getDatabase();
+  const [row] = await db
+    .select({ payload: grandCrownStateTable.payload })
+    .from(grandCrownStateTable)
+    .where(eq(grandCrownStateTable.id, 1))
+    .limit(1);
+  if (!row) {
+    throw new Error("Grand Crown PostgreSQL state is not initialized; import the existing JSON data before starting the API.");
+  }
+  return normalizeData(row.payload as Partial<Data>);
+}
+
+export async function ensureDataStoreReady() {
+  await readData();
 }
 
 function publicSettings(settings: Settings) {
@@ -357,11 +382,22 @@ function withinWithdrawalWindow(settings: Settings, date = new Date()) {
     : currentMinutes >= start || currentMinutes < end;
 }
 
-function writeData(data: Data) {
-  fs.mkdirSync(path.dirname(dataFile), { recursive: true });
-  const tempFile = `${dataFile}.tmp`;
-  fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
-  fs.renameSync(tempFile, dataFile);
+async function writeData(data: Data) {
+  if (fileStorageEnabled) {
+    fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+    const tempFile = `${dataFile}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+    fs.renameSync(tempFile, dataFile);
+    return;
+  }
+  const { db, grandCrownStateTable } = await getDatabase();
+  await db
+    .insert(grandCrownStateTable)
+    .values({ id: 1, payload: data as unknown as Record<string, unknown> })
+    .onConflictDoUpdate({
+      target: grandCrownStateTable.id,
+      set: { payload: data as unknown as Record<string, unknown>, updatedAt: new Date() },
+    });
 }
 
 function hashPassword(password: string, salt = crypto.randomBytes(16).toString("hex")) {
@@ -441,29 +477,37 @@ function setCookie(res: Response, name: string, value: string, maxAge: number) {
   );
 }
 
+function sessionTokenHash(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 function currentUser(req: Request, data: Data) {
   const token = cookieValue(req, "gc_user");
-  const session = token ? userSessions.get(token) : undefined;
-  if (!session || session.expiresAt < Date.now()) {
-    if (token) userSessions.delete(token);
-    return undefined;
-  }
+  if (!token) return undefined;
+  const session = data.sessions.find(
+    (item): item is UserSession =>
+      item.kind === "user" &&
+      item.tokenHash === sessionTokenHash(token) &&
+      item.expiresAt > Date.now(),
+  );
+  if (!session) return undefined;
   const user = data.users.find((item) => item.id === session.userId);
   return user?.banned ? undefined : user;
 }
 
-function currentAdminSession(req: Request) {
+function currentAdminSession(req: Request, data: Data) {
   const token = cookieValue(req, "gc_admin");
-  const session = token ? adminSessions.get(token) : undefined;
-  if (!session || session.expiresAt < Date.now()) {
-    if (token) adminSessions.delete(token);
-    return undefined;
-  }
-  return session;
+  if (!token) return undefined;
+  return data.sessions.find(
+    (item): item is AdminSession =>
+      item.kind === "admin" &&
+      item.tokenHash === sessionTokenHash(token) &&
+      item.expiresAt > Date.now(),
+  );
 }
 
-function isAdmin(req: Request) {
-  return Boolean(currentAdminSession(req));
+function isAdmin(req: Request, data: Data) {
+  return Boolean(currentAdminSession(req, data));
 }
 
 function requireUser(req: Request, res: Response, data: Data) {
@@ -480,16 +524,18 @@ function requireUser(req: Request, res: Response, data: Data) {
   return user;
 }
 
-function requireAdmin(req: Request, res: Response) {
-  if (!isAdmin(req)) {
+async function requireAdmin(req: Request, res: Response) {
+  const data = await readData();
+  if (!isAdmin(req, data)) {
     res.status(401).json({ error: "Administrator login required" });
     return false;
   }
   return true;
 }
 
-function requireOwnerAdmin(req: Request, res: Response) {
-  const session = currentAdminSession(req);
+async function requireOwnerAdmin(req: Request, res: Response) {
+  const data = await readData();
+  const session = currentAdminSession(req, data);
   if (!session) {
     res.status(401).json({ error: "Administrator login required" });
     return false;
@@ -537,7 +583,7 @@ function addTransaction(
   });
 }
 
-function processEarnings(data: Data) {
+async function processEarnings(data: Data) {
   let changed = false;
   const cycleMs = dayMs * Math.max(1, data.settings.cycleDays || 1);
   for (const purchase of data.purchases) {
@@ -575,7 +621,7 @@ function processEarnings(data: Data) {
       changed = true;
     }
   }
-  if (changed) writeData(data);
+  if (changed) await writeData(data);
 }
 
 function applyReferralCommissions(data: Data, buyer: User, purchase: Purchase) {
@@ -610,7 +656,57 @@ function normalizeUgandaPhone(value: string) {
 
 const router: IRouter = Router();
 
-router.use((req, res, next) => {
+let localRequestQueue: Promise<void> = Promise.resolve();
+
+async function acquireLocalRequestTurn() {
+  let release!: () => void;
+  const turn = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const previous = localRequestQueue;
+  localRequestQueue = previous.then(() => turn);
+  await previous;
+  return release;
+}
+
+router.use(async (_req, res, next) => {
+  const releaseLocal = await acquireLocalRequestTurn();
+  if (fileStorageEnabled) {
+    res.once("finish", releaseLocal);
+    res.once("close", releaseLocal);
+    return next();
+  }
+  let client: import("pg").PoolClient | undefined;
+  try {
+    const { pool } = await getDatabase();
+    client = await pool.connect();
+    await client.query("SELECT pg_advisory_lock(381049882211337::bigint)");
+  } catch {
+    client?.release(true);
+    releaseLocal();
+    return res.status(503).json({ error: "Persistent storage is temporarily unavailable." });
+  }
+  let released = false;
+  const releaseRequest = () => {
+    if (released) return;
+    released = true;
+    void (async () => {
+      try {
+        await client!.query("SELECT pg_advisory_unlock(381049882211337::bigint)");
+        client!.release();
+      } catch {
+        client!.release(true);
+      } finally {
+        releaseLocal();
+      }
+    })();
+  };
+  res.once("finish", releaseRequest);
+  res.once("close", releaseRequest);
+  return next();
+});
+
+router.use(async (req, res, next) => {
   const origin = req.get("origin");
   if (!origin) return next();
   let originHost: string;
@@ -621,7 +717,7 @@ router.use((req, res, next) => {
   } catch {
     return res.status(403).json({ error: "This website is not allowed to access Grand Crown." });
   }
-  const allowed = readData().settings.allowedDomains
+  const allowed = (await readData()).settings.allowedDomains
     .map((domain) => normalizeAllowedDomain(domain))
     .filter((domain): domain is string => Boolean(domain));
   if (originHost === requestHost || allowed.includes(originHost)) return next();
@@ -638,16 +734,20 @@ registerAccountRoutes(router, {
   addTransaction,
   id,
   now,
-  revokeOtherSessions(req, userId) {
+  revokeOtherSessions(data, req, userId) {
     const currentToken = cookieValue(req, "gc_user");
-    for (const [token, session] of userSessions) {
-      if (session.userId === userId && token !== currentToken) userSessions.delete(token);
-    }
+    const currentHash = currentToken ? sessionTokenHash(currentToken) : undefined;
+    data.sessions = data.sessions.filter(
+      (session) =>
+        session.kind !== "user" ||
+        session.userId !== userId ||
+        session.tokenHash === currentHash,
+    );
   },
 });
 
-router.get("/settings", (_req, res) => res.json(publicSettings(readData().settings)));
-router.get("/products", (_req, res) => res.json(readData().products));
+router.get("/settings", async (_req, res) => res.json(publicSettings((await readData()).settings)));
+router.get("/products", async (_req, res) => res.json((await readData()).products));
 
 function generateReferralCode(users: User[]): string | undefined {
   const existingCodes = new Set(users.map((user) => user.referralCode.toUpperCase()));
