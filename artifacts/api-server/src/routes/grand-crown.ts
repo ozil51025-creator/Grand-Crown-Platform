@@ -1333,6 +1333,7 @@ router.get("/admin/dashboard", (req, res) => {
     withdrawals: data.withdrawals.filter((item) => item.status === "pending").length,
     transactions: data.transactions.length,
     walletBalances: data.users.reduce((sum, user) => sum + user.wallet, 0),
+    productFundBalances: data.users.reduce((sum, user) => sum + user.depositBalance, 0),
     totalDeposited: data.payments.filter((item) => item.status === "completed" || item.status === "approved").reduce((sum, item) => sum + item.amount, 0),
     totalWithdrawn: data.withdrawals.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount, 0),
     totalInvested: data.purchases.reduce((sum, item) => sum + item.amount, 0),

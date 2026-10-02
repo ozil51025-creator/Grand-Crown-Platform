@@ -1076,10 +1076,11 @@ components:
         withdrawals: { type: integer }
         transactions: { type: integer }
         walletBalances: { type: number }
+        productFundBalances: { type: number }
         totalDeposited: { type: number }
         totalWithdrawn: { type: number }
         totalInvested: { type: number }
-      required: [users, products, purchases, payments, withdrawals, transactions, walletBalances, totalDeposited, totalWithdrawn, totalInvested]
+      required: [users, products, purchases, payments, withdrawals, transactions, walletBalances, productFundBalances, totalDeposited, totalWithdrawn, totalInvested]
     AdminReferralSummary:
       type: object
       properties:
