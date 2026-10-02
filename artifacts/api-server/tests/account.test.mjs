@@ -186,12 +186,46 @@ if (!bundle) {
       ["/admin/gift-codes", "POST", { code: "TEST-GIFT", amount: 1, maxRedemptions: 1 }],
       ["/admin/gift-codes/missing", "PATCH", { enabled: false }],
       ["/admin/settings", "PUT", { termsText: "Test terms" }],
+      ["/admin/users/missing/password", "POST", { password: "temporary-password" }],
     ];
     for (const [url, method, body] of cases) {
       assert.equal((await request(url, { method, body })).status, 401);
     }
     assert.equal((await request("/account/transactions", { cookie: adminCookie })).status, 401);
     assert.equal((await request("/admin/gift-codes", { cookie: member.cookie })).status, 401);
+  });
+
+  test("administrator password reset replaces the password, revokes member sessions, and never returns the password", async () => {
+    const member = await register();
+    const secondSession = await login(member.phone, "initial-password");
+    assert.equal(secondSession.status, 200);
+
+    const invalid = await request(`/admin/users/${member.user.id}/password`, {
+      method: "POST",
+      cookie: adminCookie,
+      body: { password: "short" },
+    });
+    assert.equal(invalid.status, 400);
+    assert.equal((await request("/auth/me", { cookie: member.cookie })).body.loggedIn, true);
+
+    const temporaryPassword = "temporary-member-password";
+    const reset = await request(`/admin/users/${member.user.id}/password`, {
+      method: "POST",
+      cookie: adminCookie,
+      body: { password: temporaryPassword },
+    });
+    assert.equal(reset.status, 200);
+    assert.deepEqual(reset.body, { ok: true });
+    assert.equal((await request("/auth/me", { cookie: member.cookie })).body.loggedIn, false);
+    assert.equal((await request("/auth/me", { cookie: secondSession.cookie })).body.loggedIn, false);
+    assert.equal((await login(member.phone, "initial-password")).status, 401);
+    assert.equal((await login(member.phone, temporaryPassword)).status, 200);
+
+    const storedUser = readStore().users.find((user) => user.id === member.user.id);
+    assert.equal(storedUser.passwordFormat, "raw");
+    assert.notEqual(storedUser.passwordHash, temporaryPassword);
+    assert.equal(Object.hasOwn(storedUser, "password"), false);
+    assert.equal(readStore().activity.some((item) => item.userId === member.user.id && item.type === "admin_password_reset"), true);
   });
 
   test("manual deposits require a unique transfer reference and credit product funds only after admin approval", async () => {

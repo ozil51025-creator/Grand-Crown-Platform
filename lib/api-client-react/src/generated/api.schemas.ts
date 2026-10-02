@@ -357,6 +357,14 @@ export interface BanUserInput {
   banned: boolean;
 }
 
+export interface ResetUserPasswordInput {
+  /**
+     * @minLength 8
+     * @maxLength 128
+     */
+  password: string;
+}
+
 export interface UserActionResponse {
   ok: boolean;
   user: User;

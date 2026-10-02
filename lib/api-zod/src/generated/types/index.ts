@@ -40,6 +40,7 @@ export * from './purchaseInput';
 export * from './referralMember';
 export * from './referralOverview';
 export * from './registerInput';
+export * from './resetUserPasswordInput';
 export * from './reviewInput';
 export * from './reviewInputAction';
 export * from './sessionResponse';

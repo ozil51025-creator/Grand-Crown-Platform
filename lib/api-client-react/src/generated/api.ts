@@ -51,6 +51,7 @@ import type {
   PurchaseInput,
   ReferralOverview,
   RegisterInput,
+  ResetUserPasswordInput,
   ReviewInput,
   SessionResponse,
   Settings,
@@ -2113,6 +2114,89 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getBanUserMutationOptions(options));
+    }
+
+export const getResetUserPasswordUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/users/${id}/password`
+}
+
+export const resetUserPassword = async (id: string,
+    resetUserPasswordInput: ResetUserPasswordInput, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OkResponse>(getResetUserPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resetUserPasswordInput)
+  }
+);}
+
+
+
+
+
+export const getResetUserPasswordMutationKey = () => ['resetUserPassword'] as const;
+
+export const getResetUserPasswordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,ResetUserPasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,ResetUserPasswordMutationVariables, TContext> => {
+
+const mutationKey = getResetUserPasswordMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetUserPassword>>, ResetUserPasswordMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  resetUserPassword(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetUserPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetUserPassword>>>
+    export type ResetUserPasswordMutationBody = BodyType<ResetUserPasswordInput>
+    export type ResetUserPasswordMutationError = ErrorType<unknown>
+    export type ResetUserPasswordMutationVariables = {id: string;data: BodyType<ResetUserPasswordInput>}
+
+    export const useResetUserPassword = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,ResetUserPasswordMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetUserPassword>>,
+        TError,
+        ResetUserPasswordMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResetUserPasswordMutationOptions(options));
     }
 
 export const getDeleteUserUrl = (id: string,) => {

@@ -523,6 +523,24 @@ export const BanUserResponse = zod.object({
 })
 
 
+export const ResetUserPasswordParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const resetUserPasswordBodyPasswordMin = 8;
+export const resetUserPasswordBodyPasswordMax = 128;
+
+
+
+export const ResetUserPasswordBody = zod.object({
+  "password": zod.string().min(resetUserPasswordBodyPasswordMin).max(resetUserPasswordBodyPasswordMax)
+})
+
+export const ResetUserPasswordResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
 export const DeleteUserParams = zod.object({
   "id": zod.coerce.string()
 })
