@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
-import crypto from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
@@ -32,8 +31,6 @@ if (!bundle) {
       env: {
         ...process.env,
         GRAND_CROWN_DATA_FILE: path.join(temporary, "store.json"),
-        PESAJET_API_KEY: "test-pesajet-key",
-        PESAJET_WEBHOOK_SECRET: "test-pesajet-webhook-secret",
       },
       stdio: "inherit",
     });
@@ -46,38 +43,6 @@ if (!bundle) {
   const router = require(bundle).default;
   const storeFile = process.env.GRAND_CROWN_DATA_FILE;
   assert.ok(storeFile && storeFile.startsWith(os.tmpdir()) && !storeFile.endsWith("data.json"));
-  const realFetch = globalThis.fetch;
-  const providerTransactions = new Map();
-  const providerRequests = [];
-  let providerSequence = 0;
-  globalThis.fetch = async (input, init) => {
-    const url = new URL(String(input));
-    if (url.hostname !== "payments.pesajet.com") return realFetch(input, init);
-    providerRequests.push({ url: url.toString(), init });
-    if (init?.method === "POST" && url.pathname === "/api/v1/payments") {
-      const body = JSON.parse(String(init.body));
-      providerSequence += 1;
-      const transaction = {
-        transactionId: `PJ-TEST-${providerSequence}`,
-        reference: body.reference,
-        amount: body.amount,
-        currency: body.currency,
-        status: "PENDING",
-        provider: body.provider,
-        type: body.type,
-      };
-      providerTransactions.set(transaction.transactionId, transaction);
-      return new Response(JSON.stringify(transaction), { status: 201, headers: { "Content-Type": "application/json" } });
-    }
-    if (init?.method !== "POST" && url.pathname.startsWith("/api/v1/payments/")) {
-      const id = decodeURIComponent(url.pathname.slice("/api/v1/payments/".length));
-      const transaction = providerTransactions.get(id);
-      return transaction
-        ? new Response(JSON.stringify(transaction), { status: 200, headers: { "Content-Type": "application/json" } })
-        : new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
-    }
-    return new Response(JSON.stringify({ error: "Unexpected test request" }), { status: 400, headers: { "Content-Type": "application/json" } });
-  };
   let server;
   let origin;
   let adminCookie;
@@ -150,12 +115,6 @@ if (!bundle) {
   async function changePassword(cookie, currentPassword, newPassword) {
     return request("/account/password", { method: "POST", cookie, body: { currentPassword, newPassword } });
   }
-  function signPesaJetPayload(payload) {
-    return crypto.createHmac("sha256", "test-pesajet-webhook-secret")
-      .update(JSON.stringify(payload))
-      .digest("hex");
-  }
-
   before(async () => {
     const app = express();
     app.set("trust proxy", true);
@@ -171,9 +130,6 @@ if (!bundle) {
   });
   beforeEach(async () => {
     testIndex += 1;
-    providerTransactions.clear();
-    providerRequests.length = 0;
-    providerSequence = 0;
     saveStore(initial());
     const result = await request("/admin/auth/login", {
       method: "POST",
@@ -238,25 +194,23 @@ if (!bundle) {
     assert.equal((await request("/admin/gift-codes", { cookie: member.cookie })).status, 401);
   });
 
-  test("PesaJet deposits credit product funds only after settlement and those funds can purchase products", async () => {
+  test("manual deposits require a unique transfer reference and credit product funds only after admin approval", async () => {
     const member = await register();
     const before = readStore().users.find((user) => user.id === member.user.id);
     const created = await request("/payments", {
       method: "POST",
       cookie: member.cookie,
-      body: { amount: 12000, method: "MTN Mobile Money", payerPhone: "0700 000 001" },
+      body: {
+        amount: 19000,
+        method: "MTN Mobile Money",
+        payerPhone: "0700 000 001",
+        payerReference: "MTN-REF-1001",
+      },
     });
     assert.equal(created.status, 201);
     assert.equal(created.body.status, "pending");
     assert.equal(created.body.payment.status, "pending");
-    assert.equal(providerRequests.length, 1);
-    const collectionRequest = providerRequests[0];
-    const collectionBody = JSON.parse(String(collectionRequest.init.body));
-    assert.equal(collectionBody.type, "COLLECTION");
-    assert.equal(collectionBody.phoneNumber, "+256700000001");
-    assert.equal(collectionBody.provider, "mtn");
-    assert.equal(collectionBody.currency, "UGX");
-    assert.equal(collectionRequest.init.headers["Idempotency-Key"], created.body.payment.transactionId);
+    assert.equal(created.body.payment.payerReference, "MTN-REF-1001");
 
     let persisted = readStore();
     let storedMember = persisted.users.find((user) => user.id === member.user.id);
@@ -266,19 +220,41 @@ if (!bundle) {
     assert.equal(persisted.transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
     assert.equal(persisted.purchases.filter((purchase) => purchase.userId === member.user.id).length, 0);
 
-    const providerTransaction = [...providerTransactions.values()][0];
-    providerTransaction.status = "COMPLETED";
-    const settled = await request(`/payments/${created.body.paymentId}`, { cookie: member.cookie });
-    assert.equal(settled.status, 200);
-    assert.equal(settled.body.status, "completed");
-    assert.equal(typeof settled.body.settledAt, "string");
+    const duplicate = await request("/payments", {
+      method: "POST",
+      cookie: member.cookie,
+      body: {
+        amount: 19000,
+        method: "Airtel Money",
+        payerPhone: "0700 000 001",
+        payerReference: " mtn-ref-1001 ",
+      },
+    });
+    assert.equal(duplicate.status, 409);
+
+    const approved = await request(`/admin/payments/${created.body.paymentId}`, {
+      method: "PUT",
+      cookie: adminCookie,
+      body: { action: "approve" },
+    });
+    assert.equal(approved.status, 200);
+    assert.equal(approved.body.status, "approved");
+    assert.equal(approved.body.payment.status, "approved");
+    assert.equal(typeof approved.body.payment.reviewedAt, "string");
     persisted = readStore();
     storedMember = persisted.users.find((user) => user.id === member.user.id);
-    assert.equal(storedMember.depositBalance, 12000);
+    assert.equal(storedMember.depositBalance, 19000);
     assert.equal(storedMember.wallet, before.wallet);
     assert.equal(storedMember.totalEarned, before.totalEarned);
     assert.equal(persisted.transactions.filter((transaction) => transaction.type === "deposit_credit" && transaction.paymentId === created.body.paymentId).length, 1);
     assert.equal(persisted.purchases.filter((purchase) => purchase.userId === member.user.id).length, 0);
+
+    const repeatedApproval = await request(`/admin/payments/${created.body.paymentId}`, {
+      method: "PUT",
+      cookie: adminCookie,
+      body: { action: "approve" },
+    });
+    assert.equal(repeatedApproval.status, 409);
 
     const purchase = await request("/purchases", {
       method: "POST",
@@ -290,90 +266,137 @@ if (!bundle) {
     assert.equal(purchase.body.amount, 10000);
     persisted = readStore();
     storedMember = persisted.users.find((user) => user.id === member.user.id);
-    assert.equal(storedMember.depositBalance, 2000);
+    assert.equal(storedMember.depositBalance, 9000);
     assert.equal(storedMember.wallet, before.wallet);
     assert.equal(storedMember.totalEarned, before.totalEarned);
     assert.equal(persisted.transactions.filter((transaction) => transaction.type === "deposit_credit" && transaction.paymentId === created.body.paymentId).length, 1);
     assert.equal(persisted.transactions.filter((transaction) => transaction.type === "product_purchase" && transaction.purchaseId === purchase.body.id).length, 1);
-
-    const settledWebhook = {
-      event: "payment.completed",
-      reference: created.body.payment.transactionId,
-      transactionId: providerTransaction.transactionId,
-      amount: 12000,
-      currency: "UGX",
-      status: "COMPLETED",
-      provider: "mtn",
-    };
-    const signature = signPesaJetPayload(settledWebhook);
-    const afterPurchase = JSON.stringify(readStore());
-    for (let replay = 0; replay < 2; replay += 1) {
-      const webhook = await request("/webhooks/pesajet", {
-        method: "POST",
-        body: settledWebhook,
-        headers: { "X-Webhook-Signature": signature },
-      });
-      assert.equal(webhook.status, 200);
-      assert.deepEqual(webhook.body, { received: true });
-    }
-    assert.equal(JSON.stringify(readStore()), afterPurchase);
   });
 
-  test("PesaJet rejects unsigned or mismatched settlement events without crediting deposits", async () => {
+  test("rejected deposits and legacy submissions without transfer references never credit product funds", async () => {
     const member = await register();
     const created = await request("/payments", {
       method: "POST",
       cookie: member.cookie,
-      body: { amount: 6500, method: "Airtel Money", payerPhone: "+256700000001" },
+      body: {
+        amount: 19000,
+        method: "Airtel Money",
+        payerPhone: "+256700000001",
+        payerReference: "AIR-REF-2002",
+      },
     });
     assert.equal(created.status, 201);
     assert.equal(created.body.status, "pending");
-    const pendingStore = JSON.stringify(readStore());
-    const settlement = {
-      event: "payment.completed",
-      reference: created.body.payment.transactionId,
-      transactionId: created.body.payment.providerTransactionId,
-      amount: 6500,
-      currency: "UGX",
-      status: "COMPLETED",
-      provider: "airtel",
-    };
-
-    const unsigned = await request("/webhooks/pesajet", {
-      method: "POST",
-      body: settlement,
-      headers: { "X-Webhook-Signature": "0".repeat(64) },
+    const rejected = await request(`/admin/payments/${created.body.paymentId}`, {
+      method: "PUT",
+      cookie: adminCookie,
+      body: { action: "reject" },
     });
-    assert.equal(unsigned.status, 401);
-    assert.equal(JSON.stringify(readStore()), pendingStore);
+    assert.equal(rejected.status, 200);
+    assert.equal(rejected.body.status, "rejected");
+    assert.equal(readStore().users.find((user) => user.id === member.user.id).depositBalance, 0);
+    assert.equal(readStore().transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
 
-    const mismatches = [
-      { amount: 6501 },
-      { currency: "USD" },
-      { provider: "mtn" },
-    ];
-    for (const mismatch of mismatches) {
-      const payload = { ...settlement, ...mismatch };
-      const result = await request("/webhooks/pesajet", {
-        method: "POST",
-        body: payload,
-        headers: { "X-Webhook-Signature": signPesaJetPayload(payload) },
-      });
-      assert.equal(result.status, 400);
-      assert.equal(JSON.stringify(readStore()), pendingStore);
-    }
-    const unknownReference = { ...settlement, reference: "GC-UNKNOWN-REFERENCE" };
-    const ignored = await request("/webhooks/pesajet", {
-      method: "POST",
-      body: unknownReference,
-      headers: { "X-Webhook-Signature": signPesaJetPayload(unknownReference) },
+    const data = readStore();
+    data.payments.push({
+      id: "LEGACY-PAYMENT-WITHOUT-REFERENCE",
+      userId: member.user.id,
+      amount: 19000,
+      method: "MTN Mobile Money",
+      payerPhone: "0700000001",
+      transactionId: "OLD-TRANSACTION",
+      status: "pending",
+      createdAt: new Date().toISOString(),
     });
-    assert.equal(ignored.status, 200);
-    assert.deepEqual(ignored.body, { received: true });
-    assert.equal(JSON.stringify(readStore()), pendingStore);
+    saveStore(data);
+    const cannotApproveWithoutReference = await request("/admin/payments/LEGACY-PAYMENT-WITHOUT-REFERENCE", {
+      method: "PUT",
+      cookie: adminCookie,
+      body: { action: "approve" },
+    });
+    assert.equal(cannotApproveWithoutReference.status, 400);
     const storedMember = readStore().users.find((user) => user.id === member.user.id);
     assert.equal(storedMember.depositBalance, 0);
     assert.equal(readStore().transactions.filter((transaction) => transaction.type === "deposit_credit").length, 0);
+  });
+
+  test("new purchases pay only 10% to Level 1 while preserving historical Level 2 and Level 3 credits", async () => {
+    const levelOne = await register();
+    const levelTwo = await register("0700000002", "initial-password", levelOne.user.referralCode);
+    const buyer = await register("0700000003", "initial-password", levelTwo.user.referralCode);
+
+    const data = readStore();
+    data.settings = {
+      ...data.settings,
+      l1CommissionPercent: 25,
+      l2CommissionPercent: 2,
+      l3CommissionPercent: 1,
+    };
+    data.transactions.push(
+      {
+        id: "HISTORIC-LEVEL-TWO",
+        userId: levelOne.user.id,
+        type: "referral_commission",
+        amount: 200,
+        level: 2,
+        purchaseId: "HISTORIC-PURCHASE-TWO",
+        createdAt: "2025-01-01T00:00:00.000Z",
+      },
+      {
+        id: "HISTORIC-LEVEL-THREE",
+        userId: levelOne.user.id,
+        type: "referral_commission",
+        amount: 100,
+        level: 3,
+        purchaseId: "HISTORIC-PURCHASE-THREE",
+        createdAt: "2025-01-01T00:00:00.000Z",
+      },
+    );
+    const storedLevelOne = data.users.find((user) => user.id === levelOne.user.id);
+    storedLevelOne.wallet += 300;
+    storedLevelOne.totalEarned += 300;
+    saveStore(data);
+
+    const deposit = await request("/payments", {
+      method: "POST",
+      cookie: buyer.cookie,
+      body: {
+        amount: 19000,
+        method: "MTN Mobile Money",
+        payerPhone: "0700000003",
+        payerReference: "BUYER-TRANSFER-3003",
+      },
+    });
+    assert.equal(deposit.status, 201);
+    const approval = await request(`/admin/payments/${deposit.body.paymentId}`, {
+      method: "PUT",
+      cookie: adminCookie,
+      body: { action: "approve" },
+    });
+    assert.equal(approval.status, 200);
+    const purchase = await request("/purchases", {
+      method: "POST",
+      cookie: buyer.cookie,
+      body: { productId: "TEST-PRODUCT" },
+    });
+    assert.equal(purchase.status, 201);
+
+    const persisted = readStore();
+    const newCommissions = persisted.transactions.filter(
+      (transaction) =>
+        transaction.type === "referral_commission" &&
+        transaction.purchaseId === purchase.body.id,
+    );
+    assert.deepEqual(
+      newCommissions.map(({ userId, amount, level }) => ({ userId, amount, level })),
+      [{ userId: levelTwo.user.id, amount: 1000, level: 1 }],
+    );
+    assert.equal(persisted.transactions.some((item) => item.id === "HISTORIC-LEVEL-TWO"), true);
+    assert.equal(persisted.transactions.some((item) => item.id === "HISTORIC-LEVEL-THREE"), true);
+    assert.equal(
+      persisted.users.find((user) => user.id === levelOne.user.id).wallet,
+      levelOne.user.wallet + 300,
+    );
   });
 
   test("wrong current password, same password and invalid bounds do not change credentials", async () => {
