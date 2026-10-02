@@ -187,7 +187,8 @@ const defaultSettings: Settings = {
   l1CommissionPercent: 25,
   l2CommissionPercent: 2,
   l3CommissionPercent: 1,
-  returnMultiple: 2,
+  // Four keeps current plan payouts unchanged (the largest existing plan is 3.75x).
+  returnMultiple: 4,
   cycleDays: 1,
   maxWithdrawalsPerUserPerDay: 0,
   requirePlanBeforeWithdraw: true,
@@ -519,6 +520,10 @@ function processEarnings(data: Data) {
       Math.max(0, Math.floor((Date.now() - started) / cycleMs)),
       product.days,
     );
+    const maxReturn = Math.max(0, purchase.amount * data.settings.returnMultiple);
+    let creditedAmount = data.transactions
+      .filter((transaction) => transaction.type === "daily_earning" && transaction.purchaseId === purchase.id)
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
     while (purchase.earningsCredited < target) {
       const day = purchase.earningsCredited + 1;
       const exists = data.transactions.some(
@@ -528,12 +533,13 @@ function processEarnings(data: Data) {
           transaction.day === day,
       );
       if (!exists) {
-        user.wallet += product.daily;
-        user.totalEarned += product.daily;
-        addTransaction(data, user.id, "daily_earning", product.daily, {
-          purchaseId: purchase.id,
-          day,
-        });
+        const amount = Math.min(product.daily, Math.max(0, maxReturn - creditedAmount));
+        if (amount > 0) {
+          user.wallet += amount;
+          user.totalEarned += amount;
+          creditedAmount += amount;
+          addTransaction(data, user.id, "daily_earning", amount, { purchaseId: purchase.id, day });
+        }
       }
       purchase.earningsCredited = day;
       changed = true;
@@ -1231,16 +1237,22 @@ router.put("/admin/settings", (req, res) => {
     return res.status(400).json({ error: "Enter valid settings; terms text must be at most 20000 characters." });
   }
   const data = readData();
-  for (const [key, value] of Object.entries(parsed.data)) {
-    if (value !== undefined) {
-      if (key === "brand") {
-        if (!value.trim()) return res.status(400).json({ error: "Brand cannot be blank" });
-        data.settings.brand = value.trim().slice(0, 80);
-      } else {
-        data.settings[key as Exclude<keyof Settings, "brand">] = value;
-      }
-    }
+  if (!parsed.data.brand.trim()) {
+    return res.status(400).json({ error: "Brand cannot be blank" });
   }
+  const allowedDomains = parsed.data.allowedDomains.map(normalizeAllowedDomain);
+  if (allowedDomains.some((domain) => !domain)) {
+    return res.status(400).json({ error: "Enter valid website hostnames without paths or wildcards." });
+  }
+  if (parsed.data.openingAt && !Number.isFinite(Date.parse(parsed.data.openingAt))) {
+    return res.status(400).json({ error: "Enter a valid opening date and time." });
+  }
+  data.settings = {
+    ...data.settings,
+    ...parsed.data,
+    brand: parsed.data.brand.trim().slice(0, 80),
+    allowedDomains: allowedDomains.filter((domain): domain is string => Boolean(domain)),
+  };
   writeData(data);
   return res.json(data.settings);
 });
