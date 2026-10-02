@@ -115,6 +115,10 @@ function Logo({ small = false }: { small?: boolean }) {
   );
 }
 
+function newPaymentReference() {
+  return `GC-${window.crypto.randomUUID().replaceAll('-', '').slice(0, 20).toUpperCase()}`;
+}
+
 function Button({ children, variant = 'primary', className = '', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'outline' | 'danger' }) {
   const styles = {
     primary: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_8px_18px_hsl(var(--primary)/.12)]',
@@ -265,7 +269,7 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const [modal, setModal] = useState<'payment' | 'withdrawal' | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState<string | null>(null);
-  const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone, transactionId: '' });
+  const [payment, setPayment] = useState({ method: 'MTN Mobile Money', payerPhone: user.phone });
   const [withdrawal, setWithdrawal] = useState({ amount: '', method: 'MTN Mobile Money', phone: user.phone });
   const currency = settings.data?.currency || 'UGX';
   const userData = dashboard.data?.user || user;
@@ -275,8 +279,8 @@ function MemberContent({ active, user, setActive, onLogout, loggingOut }: { acti
   const experiencePhoto = active === 'overview' || active === 'purchases'
     ? planImage(primaryPlan?.productName || 'Presidential Suite')
     : undefined;
-  const openPayment = (product: Product) => { setSelectedProduct(product); setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone, transactionId: '' }); setModal('payment'); };
-  const submitPaymentForm = (event: FormEvent) => { event.preventDefault(); if (!selectedProduct) return; submitPayment.mutate({ data: { productId: selectedProduct.id, amount: selectedProduct.price, ...payment } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Payment submitted', description: 'We will verify your mobile-money payment manually.' }); } }); };
+  const openPayment = (product: Product) => { setSelectedProduct(product); setPayment({ method: 'MTN Mobile Money', payerPhone: user.phone }); setModal('payment'); };
+  const submitPaymentForm = (event: FormEvent) => { event.preventDefault(); if (!selectedProduct) return; submitPayment.mutate({ data: { productId: selectedProduct.id, amount: selectedProduct.price, ...payment, transactionId: newPaymentReference() } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Payment prompt sent', description: 'Check your phone and enter your mobile-money PIN. The plan activates after payment verification.' }); } }); };
   const submitWithdrawalForm = (event: FormEvent) => { event.preventDefault(); requestWithdrawal.mutate({ data: { amount: Number(withdrawal.amount), method: withdrawal.method, phone: withdrawal.phone } }, { onSuccess: () => { queryClient.invalidateQueries(); setModal(null); toast({ title: 'Withdrawal requested', description: 'Your request is now waiting for administrator review.' }); } }); };
   const claim = () => checkin.mutate(undefined, { onSuccess: result => { queryClient.invalidateQueries(); toast({ title: `Check-in credited ${money(result.reward, currency)}`, description: 'Your daily rhythm is intact.' }); } });
   const announcementKey = `${settings.data?.announcementTitle || ''}:${settings.data?.announcementMessage || ''}`;
