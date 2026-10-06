@@ -17,6 +17,6 @@
 //   export type InsertPost = z.infer<typeof insertPostSchema>;
 //   export type Post = typeof postsTable.$inferSelect;
 
-export * from "./grand-crown-state";
+
 
 export * from "./grand-crown-state.ts";
