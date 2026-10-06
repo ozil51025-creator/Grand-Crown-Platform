@@ -24,15 +24,17 @@ async function main() {
       .from(grandCrownStateTable)
       .where(eq(grandCrownStateTable.id, 1))
       .limit(1);
-    if (existing) {
-      throw new Error("Grand Crown state already exists; refusing to overwrite it.");
-    }
-
-    await db.insert(grandCrownStateTable).values({
-      id: 1,
-      payload: parsed,
-    });
-
+if (existing) {
+  await db
+    .update(grandCrownStateTable)
+    .set({ payload: parsed })
+    .where(eq(grandCrownStateTable.id, 1));
+} else {
+  await db.insert(grandCrownStateTable).values({
+    id: 1,
+    payload: parsed,
+  });
+}
     const collectionCounts = Object.fromEntries(
       ["users", "purchases", "transactions", "payments", "withdrawals", "giftCodes"]
         .map((key) => [key, Array.isArray(parsed[key]) ? parsed[key].length : 0]),
