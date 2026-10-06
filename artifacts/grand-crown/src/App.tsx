@@ -160,7 +160,7 @@ function QueryState({ loading, error, children, empty }: { loading?: boolean; er
 }
 
 function AuthPage() {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+const [mode, setMode] = useState<'login' | 'register'>('register');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
