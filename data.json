@@ -1,0 +1,132 @@
+{
+  "settings": {
+    "brand": "Grand Crown",
+    "currency": "UGX",
+    "welcomeBonus": 2100,
+    "dailyCheckin": 100,
+    "minTopup": 22000,
+    "minWithdrawal": 3000,
+    "withdrawalFee": 12,
+    "withdrawalHours": "10:00 AM - 5:00 PM EAT",
+    "level1Commission": 10,
+    "level2Commission": 0,
+    "level3Commission": 0,
+    "paymentMethod": "PesaJet",
+    "paymentUrl": "https://pay.pesajet.com/pay/d9c18ef87c",
+    "support": "@Grandcrown01",
+    "telegram": "https://t.me/+zNDnaz_xKfdiMTlk"
+  },
+  "products": [
+    {
+      "id": "PROD-1",
+      "name": "Garden View",
+      "price": 19000,
+      "daily": 912,
+      "total": 34656,
+      "days": 38
+    },
+    {
+      "id": "PROD-2",
+      "name": "Mountain View",
+      "price": 30000,
+      "daily": 2400,
+      "total": 72000,
+      "days": 30
+    },
+    {
+      "id": "PROD-3",
+      "name": "Ocean View",
+      "price": 50000,
+      "daily": 4000,
+      "total": 120000,
+      "days": 30
+    },
+    {
+      "id": "PROD-4",
+      "name": "Executive Room",
+      "price": 115000,
+      "daily": 9200,
+      "total": 294400,
+      "days": 32
+    },
+    {
+      "id": "PROD-5",
+      "name": "Deluxe Room",
+      "price": 250000,
+      "daily": 32500,
+      "total": 650000,
+      "days": 20
+    },
+    {
+      "id": "PROD-6",
+      "name": "Sunset View",
+      "price": 370000,
+      "daily": 55500,
+      "total": 999000,
+      "days": 18
+    },
+    {
+      "id": "PROD-7",
+      "name": "Family Suite",
+      "price": 550000,
+      "daily": 82500,
+      "total": 1650000,
+      "days": 20
+    },
+    {
+      "id": "PROD-8",
+      "name": "Silver Suite",
+      "price": 775000,
+      "daily": 116250,
+      "total": 2325000,
+      "days": 20
+    },
+    {
+      "id": "PROD-9",
+      "name": "Honeymoon Suite",
+      "price": 1650000,
+      "daily": 247500,
+      "total": 4950000,
+      "days": 20
+    },
+    {
+      "id": "PROD-10",
+      "name": "Golden Suite",
+      "price": 3000000,
+      "daily": 540000,
+      "total": 9180000,
+      "days": 17
+    },
+    {
+      "id": "PROD-11",
+      "name": "Diamond Suite",
+      "price": 5000000,
+      "daily": 1000000,
+      "total": 10000000,
+      "days": 10
+    },
+    {
+      "id": "PROD-12",
+      "name": "Royal Suite",
+      "price": 8000000,
+      "daily": 1600000,
+      "total": 16000000,
+      "days": 10
+    },
+    {
+      "id": "PROD-13",
+      "name": "Presidential Suite",
+      "price": 12000000,
+      "daily": 3000000,
+      "total": 45000000,
+      "days": 15
+    }
+  ],
+  "users": [],
+  "purchases": [],
+  "transactions": [],
+  "referrals": [],
+  "activity": [],
+  "payments": [],
+  "withdrawals": []
+}
